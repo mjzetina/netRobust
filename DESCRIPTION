@@ -1,0 +1,27 @@
+Package: netRobust
+Title: Network Robustness Under Random Failures and Targeted Attacks
+Version: 0.0.0.9000
+Authors@R:
+    person("Manuel J.", "Zetina-Rejon", , "mjzetina@gmail.com", role = c("aut", "cre"))
+Description: Simulates and compares network robustness to random node
+    failures and targeted attacks (by degree, betweenness, closeness,
+    eigenvector centrality, and PageRank), extending the approach of
+    Albert, Jeong & Barabasi (2000) <doi:10.1038/35019019>. Includes a
+    Monte Carlo framework for testing whether an attack scenario is
+    statistically more damaging than random failure, and utilities for
+    plotting robustness curves with a null-model reference envelope.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0
+Depends:
+    R (>= 4.1)
+Imports:
+    dplyr,
+    ggplot2,
+    igraph,
+    stats,
+    tidyr,
+    utils
+Suggests:
+    future.apply
