@@ -1,1 +1,14 @@
+# RStudio project-level files (machine-specific, never share these)
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# R session/build artifacts
 .Rproj.user
+*.Rout
+Rplots.pdf
+
+# OS-specific junk
+.DS_Store
+Thumbs.db
