@@ -69,7 +69,7 @@ order up front, per Albert et al. 2000 -- they are not recomputed at each
 step as \code{\link[=robustness]{robustness()}} removes nodes.) igraph also emits a warning
 whenever it has to do this component-wise calculation, which would flood
 the console if \code{g} is disconnected and this is called across thousands of
-Monte Carlo replicates (see \code{\link[=robustness_null]{robustness_null()}}) -- that warning is
+Monte Carlo replicates (see \code{\link[=robustness_null_removal]{robustness_null_removal()}}) -- that warning is
 intentionally suppressed.
 }
 \seealso{

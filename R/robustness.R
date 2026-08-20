@@ -371,7 +371,7 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
 #'
 #' @seealso [random_failures()], [attack_by_degree()],
 #'   [default_robustness_indicators()], [optional_robustness_indicators()],
-#'   [robustness_null()]
+#'   [robustness_null_removal()]
 #' @export
 robustness <- function(g, ids, indicators = NULL, exclude = NULL, keep = NULL,
                         custom = NULL, optional = NULL,

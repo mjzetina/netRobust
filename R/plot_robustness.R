@@ -7,12 +7,23 @@
 #'
 #' Draws the failure and attack robustness curves side by side, one panel
 #' per indicator, optionally with a shaded Monte Carlo null envelope
-#' (see [robustness_null()] / [summarise_null()]) behind them.
+#' (see [robustness_null_removal()] / [summarise_null()]) behind them.
 #'
 #' @param failure,attack Output of [robustness()] for the failure and
-#'   attack scenarios, respectively.
+#'   attack scenarios, respectively. When plotting against a null model,
+#'   `failure` should be the *median* curve from that null distribution
+#'   rather than a single [random_failures()] draw -- e.g.
+#'   `tidyr::pivot_wider(null_envelope, id_cols = N, names_from = Index,
+#'   values_from = median)` -- since a lone random draw isn't a meaningful
+#'   representative of the null once you already have many replicates of it.
+#'   The legend/caption reflect this automatically when `null_envelope` is
+#'   supplied (see `null_envelope` below).
 #' @param null_envelope Optional output of [summarise_null()]. If supplied,
-#'   drawn as a shaded 95% reference band behind the curves.
+#'   drawn as a shaded 95% reference band behind the curves, and the
+#'   `failure` curve is labelled "Failures (median)" in the legend/caption
+#'   (on the assumption that `failure` is that null's median curve, per
+#'   above) instead of the plain "Failures" used when no null model is
+#'   involved.
 #' @param scenario_colors Named character vector of two hex colours, named
 #'   `"Attack"` and `"Failures"`, controlling the curve colours. Defaults
 #'   to `c(Attack = "#1F77B4", Failures = "#D62728")`. Override to match a
@@ -31,15 +42,17 @@
 #' the specific scenario/indicator/step count affected, before ggplot2's
 #' own generic "Removed N rows..." warnings fire at print time.
 #'
-#' @seealso [robustness()], [robustness_null()], [summarise_null()]
+#' @seealso [robustness()], [robustness_null_removal()], [summarise_null()]
 #' @export
 plot_robustness <- function(failure, attack, null_envelope = NULL,
                              scenario_colors = c(Attack = "#1F77B4", Failures = "#D62728"),
                              null_color = "grey40") {
+  failure_label <- if (!is.null(null_envelope)) "Failures (median)" else "Failures"
+
   failure_lon <- tidyr::pivot_longer(failure, -N, names_to = "Index", values_to = "Value")
   attack_lon  <- tidyr::pivot_longer(attack,  -N, names_to = "Index", values_to = "Value")
 
-  failure_lon$Scenario <- "Failures"
+  failure_lon$Scenario <- failure_label
   attack_lon$Scenario  <- "Attack"
 
   scenarios <- rbind(failure_lon, attack_lon)
@@ -81,6 +94,10 @@ plot_robustness <- function(failure, attack, null_envelope = NULL,
   }
 
   if (!is.null(scenario_colors)) {
+    # scenario_colors is keyed "Failures"/"Attack" by convention; remap the
+    # "Failures" key to match failure_label so the colour scale still lines
+    # up, without forcing callers to know about the "(median)" suffix.
+    names(scenario_colors)[names(scenario_colors) == "Failures"] <- failure_label
     p <- p + ggplot2::scale_colour_manual(values = scenario_colors)
   }
 
@@ -89,7 +106,9 @@ plot_robustness <- function(failure, attack, null_envelope = NULL,
     ggplot2::geom_point(size = 1) +
     ggplot2::facet_wrap(~ Index, scales = "free_y") +
     ggplot2::labs(x = "Number of removed nodes", y = "Value",
-         caption = if (!is.null(null_envelope)) "Shaded band: 95% envelope of random-failure replicates" else NULL) +
+         caption = if (!is.null(null_envelope))
+           "Line: median across null-model replicates. Shaded band: 95% envelope."
+         else NULL) +
     ggplot2::theme_bw() +
     ggplot2::theme(legend.position = "bottom")
 }

@@ -7,7 +7,7 @@
 #' [removal_order()] by treating a random permutation as if it were a
 #' centrality vector -- this keeps `random_failures()` structurally
 #' identical to every `attack_by_*()` function, so [robustness()] and
-#' [robustness_null()] don't need to know whether an order came from chance
+#' [robustness_null_removal()] don't need to know whether an order came from chance
 #' or from a targeted attack criterion.
 #'
 #' @param g An `igraph` object.
@@ -15,7 +15,7 @@
 #' @return A named integer vector in removal order, as produced by
 #'   [removal_order()] -- ready to pass to [robustness()].
 #'
-#' @seealso [removal_order()], [robustness_null()] (runs many replicates of
+#' @seealso [removal_order()], [robustness_null_removal()] (runs many replicates of
 #'   this function to build the statistical null distribution)
 #' @export
 random_failures <- function(g) {

@@ -7,23 +7,28 @@
 summarise_null(null_df, probs = c(lower = 0.025, median = 0.5, upper = 0.975))
 }
 \arguments{
-\item{null_df}{Output of \code{\link[=robustness_null]{robustness_null()}} (wide format, one column
-per indicator plus \code{N} and \code{rep}).}
+\item{null_df}{Output of \code{\link[=robustness_null_removal]{robustness_null_removal()}} or
+\code{\link[=robustness_null_structural]{robustness_null_structural()}} (wide format, one column per indicator
+plus \code{N} and \code{rep}).}
 
 \item{probs}{Named numeric vector of three quantiles to compute. Must be
 named \code{lower}, \code{median}, \code{upper} (the names -- not \code{quantile()}'s own
 auto-generated labels -- are what determine the output column names).}
 }
 \value{
-A \code{data.frame} with columns \code{Index}, \code{N}, \code{lower}, \code{median},
-\code{upper} -- long format, one row per indicator per removal step.
+A \code{data.frame} with columns \code{Index}, \code{N}, \code{mean}, \code{lower},
+\code{median}, \code{upper} -- long format, one row per indicator per removal
+step.
 }
 \description{
-Collapses the many replicates from \code{\link[=robustness_null]{robustness_null()}} into, by default,
-a 95\% envelope (2.5\% / 50\% / 97.5\% quantiles) per indicator and per
-number of nodes removed -- ready to hand to \code{\link[=plot_robustness]{plot_robustness()}}'s
-\code{null_envelope} argument as a shaded reference band.
+Collapses the many replicates from \code{\link[=robustness_null_removal]{robustness_null_removal()}} or
+\code{\link[=robustness_null_structural]{robustness_null_structural()}} into, by default, a 95\% envelope (2.5\% /
+50\% / 97.5\% quantiles) plus the mean, per indicator and per number of
+nodes removed -- ready to hand to \code{\link[=plot_robustness]{plot_robustness()}}'s \code{null_envelope}
+argument as a shaded reference band (the \code{median} column is what
+\code{\link[=plot_robustness]{plot_robustness()}} draws as the representative "Failures" line).
 }
 \seealso{
-\code{\link[=robustness_null]{robustness_null()}}, \code{\link[=plot_robustness]{plot_robustness()}}
+\code{\link[=robustness_null_removal]{robustness_null_removal()}}, \code{\link[=robustness_null_structural]{robustness_null_structural()}},
+\code{\link[=plot_robustness]{plot_robustness()}}
 }

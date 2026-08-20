@@ -108,5 +108,5 @@ curve, one row per number of nodes removed.
 \seealso{
 \code{\link[=random_failures]{random_failures()}}, \code{\link[=attack_by_degree]{attack_by_degree()}},
 \code{\link[=default_robustness_indicators]{default_robustness_indicators()}}, \code{\link[=optional_robustness_indicators]{optional_robustness_indicators()}},
-\code{\link[=robustness_null]{robustness_null()}}
+\code{\link[=robustness_null_removal]{robustness_null_removal()}}
 }

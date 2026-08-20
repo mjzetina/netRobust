@@ -8,12 +8,37 @@
 # from many random-removal replicates and compare the observed (attack)
 # curve against it, step by step.
 #
+# Two null models are available, answering different questions:
+#   - robustness_null_removal(): fixes the network, randomises the removal
+#     order. "Is this attack strategy more damaging than random failure, on
+#     this specific network?" -- the Albert et al. (2000) framing.
+#   - robustness_null_structural(): fixes the removal *strategy*, randomises
+#     the network's topology (degree-preserving rewiring). "Is this
+#     network's structure itself more/less robust to this attack strategy
+#     than expected by chance, given its size and degree sequence?"
+#
 # Requires: igraph (already used elsewhere). Uses future.apply for
 # parallel replicates if installed; falls back to plain lapply otherwise.
 #   install.packages("future.apply")
+# Uses progressr for an optional progress indicator, if installed:
+#   install.packages("progressr"); progressr::handlers(global = TRUE)
 
-# --- 1. Build the null distribution ----------------------------------------
-#' Monte Carlo null distribution of robustness curves
+# --- 0. Progress reporting (internal) ---------------------------------------
+# Returns a callable p() that reports one step of progress via progressr if
+# it's installed and the caller has activated handlers (progressr::handlers()),
+# or a silent no-op otherwise. Works identically in sequential and
+# future.apply-parallel replicates -- progressr is designed to signal
+# across future workers without any extra plumbing here.
+.null_progressor <- function(n) {
+  if (requireNamespace("progressr", quietly = TRUE)) {
+    progressr::progressor(steps = n)
+  } else {
+    function(...) invisible(NULL)
+  }
+}
+
+# --- 1. Build the null distribution (removal-order randomisation) ----------
+#' Monte Carlo null distribution of robustness curves (random removal order)
 #'
 #' Runs `n_reps` independent random-failure simulations of the same network
 #' (via [random_failures()] + [robustness()]), producing the empirical null
@@ -21,6 +46,11 @@
 #' the statistical baseline against which a targeted attack curve can be
 #' judged: if a single random draw is unusual to expect, thousands of them
 #' trace out the range of outcomes chance alone would produce.
+#'
+#' The network itself is fixed here -- only the removal order is randomised.
+#' To instead ask whether the network's *structure* is unusually robust
+#' relative to random networks with the same degree sequence, see
+#' [robustness_null_structural()].
 #'
 #' @param g An `igraph` object.
 #' @param n_reps Number of random-failure replicates. Rubio's thesis (this
@@ -41,23 +71,26 @@
 #'   settings as that curve -- same indicators, same directed/weights
 #'   treatment. Pass here whatever extra arguments you used when computing
 #'   the scenario you're testing against, e.g.
-#'   `robustness_null(g, keep = c("GC", "APL"), directed = TRUE)` to match
-#'   `robustness(g, ids, keep = c("GC", "APL"), directed = TRUE)`.
+#'   `robustness_null_removal(g, keep = c("GC", "APL"), directed = TRUE)` to
+#'   match `robustness(g, ids, keep = c("GC", "APL"), directed = TRUE)`.
 #'
 #' @return A `data.frame` stacking all replicates: same columns as
 #'   [robustness()]'s output, plus `rep` identifying which replicate each
-#'   row came from. Pass this to [summarise_null()] or [compare_to_null()].
+#'   row came from. Pass this to [summarise_null()], [compare_to_null()], or
+#'   [robustness_index_null()].
 #'
-#' @seealso [robustness()], [random_failures()], [summarise_null()],
-#'   [compare_to_null()]
+#' @seealso [robustness()], [random_failures()], [robustness_null_structural()],
+#'   [summarise_null()], [compare_to_null()], [robustness_index_null()]
 #' @export
-robustness_null <- function(g, n_reps = 500, parallel = TRUE, seed = NULL, ...) {
+robustness_null_removal <- function(g, n_reps = 500, parallel = TRUE, seed = NULL, ...) {
   if (!is.null(seed)) set.seed(seed)
+  p <- .null_progressor(n_reps)
 
   run_one <- function(i) {
     ids <- random_failures(g)
     res <- robustness(g, ids, ...)
     res$rep <- i
+    p()
     res
   }
 
@@ -72,25 +105,115 @@ robustness_null <- function(g, n_reps = 500, parallel = TRUE, seed = NULL, ...) 
 }
 # To run replicates in parallel across cores:
 #   future::plan(future::multisession)   # once, at the top of main.R
+# To see a progress bar (sequential or parallel):
+#   progressr::handlers(global = TRUE)   # once, at the top of main.R
+
+# --- 1b. Build the null distribution (structural randomisation) ------------
+#' Monte Carlo null distribution of robustness curves (structural randomisation)
+#'
+#' Runs `n_reps` independent replicates of a *topological* null model: each
+#' replicate rewires `g` via `igraph::rewire()` with
+#' `igraph::keeping_degseq()` (preserving the degree sequence, but
+#' randomising which vertices connect to which), applies `attack_fn` to that
+#' randomised graph to get a removal order, and runs [robustness()] on it.
+#'
+#' This answers a different question from [robustness_null_removal()]: not
+#' "does this attack strategy do more damage than chance, on this network?"
+#' but "is this network's structure itself more/less robust to this attack
+#' strategy than expected by chance, given its size and degree sequence?"
+#'
+#' Pure topological null: edge weights are dropped before rewiring (random
+#' rewiring has no principled way to reassign the observed weights to new
+#' edges -- edge weights in ecological/food-web data in particular tend to
+#' carry a lot of uncertainty, so this is the conservative choice for now).
+#' Every replicate `attack_fn` and `...` see is therefore an *unweighted*
+#' graph. Pass a weight-agnostic `attack_fn` (e.g. `attack_by_degree`, not a
+#' closure that reads `E(g)$weight`), and don't rely on `weights_as=` in
+#' `...` having any effect here.
+#'
+#' @param g An `igraph` object -- the observed network whose size and degree
+#'   sequence are preserved across replicates.
+#' @param attack_fn A `function(g)` returning a removal order (the same
+#'   contract as [random_failures()] and every `attack_by_*()` function),
+#'   applied fresh to each rewired replicate -- e.g. `attack_by_degree`, or a
+#'   wrapper like `function(g) attack_by_degree(g, mode = "in")`.
+#' @param n_reps Number of rewired replicates.
+#' @param rewire_niter Number of double-edge-swap trials passed to
+#'   `igraph::keeping_degseq(niter = )`. `NULL` (default) uses `10 *
+#'   ecount(g)`, a common rule of thumb for adequately randomising a graph.
+#' @param parallel,seed As in [robustness_null_removal()].
+#' @param ... Forwarded to every internal [robustness()] call -- must match
+#'   the settings used for the observed curve you're comparing against (see
+#'   [robustness_null_removal()] for why), minus any weight-related settings
+#'   (see Details).
+#'
+#' @return Same shape as [robustness_null_removal()]: a `data.frame` with one
+#'   column per indicator, `N`, and `rep`.
+#'
+#' @seealso [robustness_null_removal()], [summarise_null()],
+#'   [robustness_index_null()]
+#' @export
+robustness_null_structural <- function(g, attack_fn, n_reps = 500, rewire_niter = NULL,
+                                        parallel = TRUE, seed = NULL, ...) {
+  if (!is.null(seed)) set.seed(seed)
+  if (is.null(rewire_niter)) rewire_niter <- 10 * ecount(g)
+  p <- .null_progressor(n_reps)
+
+  # Weights are stripped by design (see Details) -- robustness()'s own
+  # "weights_as has no effect on an unweighted graph" warning would otherwise
+  # fire once per replicate, which is just noise once you already know why
+  # (documented above). Muffle only that exact warning; anything else
+  # robustness() raises (e.g. an indicator genuinely failing) still surfaces.
+  run_one <- function(i) {
+    gi <- rewire(g, with = keeping_degseq(niter = rewire_niter))
+    if ("weight" %in% edge_attr_names(gi)) gi <- delete_edge_attr(gi, "weight")
+    ids <- attack_fn(gi)
+    res <- withCallingHandlers(
+      robustness(gi, ids, ...),
+      warning = function(w) {
+        if (grepl("has no effect: g is an unweighted graph", conditionMessage(w), fixed = TRUE)) {
+          invokeRestart("muffleWarning")
+        }
+      }
+    )
+    res$rep <- i
+    p()
+    res
+  }
+
+  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
+  reps <- if (use_parallel) {
+    future.apply::future_lapply(seq_len(n_reps), run_one, future.seed = TRUE)
+  } else {
+    lapply(seq_len(n_reps), run_one)
+  }
+
+  do.call(rbind, reps)
+}
 
 # --- 2. Summarise the null into a quantile envelope per N ------------------
 #' Summarise a null distribution into a quantile envelope
 #'
-#' Collapses the many replicates from [robustness_null()] into, by default,
-#' a 95% envelope (2.5% / 50% / 97.5% quantiles) per indicator and per
-#' number of nodes removed -- ready to hand to [plot_robustness()]'s
-#' `null_envelope` argument as a shaded reference band.
+#' Collapses the many replicates from [robustness_null_removal()] or
+#' [robustness_null_structural()] into, by default, a 95% envelope (2.5% /
+#' 50% / 97.5% quantiles) plus the mean, per indicator and per number of
+#' nodes removed -- ready to hand to [plot_robustness()]'s `null_envelope`
+#' argument as a shaded reference band (the `median` column is what
+#' [plot_robustness()] draws as the representative "Failures" line).
 #'
-#' @param null_df Output of [robustness_null()] (wide format, one column
-#'   per indicator plus `N` and `rep`).
+#' @param null_df Output of [robustness_null_removal()] or
+#'   [robustness_null_structural()] (wide format, one column per indicator
+#'   plus `N` and `rep`).
 #' @param probs Named numeric vector of three quantiles to compute. Must be
 #'   named `lower`, `median`, `upper` (the names -- not `quantile()`'s own
 #'   auto-generated labels -- are what determine the output column names).
 #'
-#' @return A `data.frame` with columns `Index`, `N`, `lower`, `median`,
-#'   `upper` -- long format, one row per indicator per removal step.
+#' @return A `data.frame` with columns `Index`, `N`, `mean`, `lower`,
+#'   `median`, `upper` -- long format, one row per indicator per removal
+#'   step.
 #'
-#' @seealso [robustness_null()], [plot_robustness()]
+#' @seealso [robustness_null_removal()], [robustness_null_structural()],
+#'   [plot_robustness()]
 #' @export
 summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper = 0.975)) {
   # Requires: dplyr, tidyr (already used elsewhere in the project)
@@ -100,6 +223,7 @@ summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper
     tidyr::pivot_longer(cols = tidyr::all_of(idx_cols), names_to = "Index", values_to = "Value") |>
     dplyr::group_by(Index, N) |>
     dplyr::summarise(
+      mean   = mean(Value, na.rm = TRUE),
       lower  = stats::quantile(Value, probs["lower"],  na.rm = TRUE),
       median = stats::quantile(Value, probs["median"], na.rm = TRUE),
       upper  = stats::quantile(Value, probs["upper"],  na.rm = TRUE),
@@ -112,7 +236,7 @@ summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper
 #'
 #' For every removal step and every indicator, computes the two-sided
 #' empirical p-value: the fraction of null replicates (from
-#' [robustness_null()]) at least as far from the null's own mean as the
+#' [robustness_null_removal()]) at least as far from the null's own mean as the
 #' observed value is. A small p-value at a given step means the observed
 #' curve (e.g. a targeted attack) is unusually extreme compared to what
 #' random failures alone would produce at that same number of nodes
@@ -120,9 +244,9 @@ summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper
 #'
 #' @param observed Output of [robustness()] for the scenario you want to
 #'   test (e.g. an `attack_by_*()` curve).
-#' @param null_df Output of [robustness_null()] (the raw, wide-format
+#' @param null_df Output of [robustness_null_removal()] (the raw, wide-format
 #'   replicates -- not the [summarise_null()] envelope). Must have been
-#'   built with the same indicators as `observed` (see [robustness_null()]'s
+#'   built with the same indicators as `observed` (see [robustness_null_removal()]'s
 #'   `...` argument) -- if `observed` has an indicator column `null_df`
 #'   doesn't, this errors rather than silently comparing only the columns
 #'   that happen to match.
@@ -130,7 +254,7 @@ summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper
 #' @return A `data.frame` with columns `N`, `Index`, `observed`, `p_value`,
 #'   one row per indicator per removal step.
 #'
-#' @seealso [robustness_null()], [robustness()]
+#' @seealso [robustness_null_removal()], [robustness()]
 #' @export
 compare_to_null <- function(observed, null_df) {
   idx_cols <- setdiff(names(observed), "N")
@@ -140,7 +264,7 @@ compare_to_null <- function(observed, null_df) {
          paste(missing_cols, collapse = ", "), ". observed and null_df must ",
          "be built with the same indicators for the comparison to be valid ",
          "-- pass the same keep=/exclude=/custom=/directed=/... you used ",
-         "for observed to robustness_null() as well (it forwards them via ",
+         "for observed to robustness_null_removal() as well (it forwards them via ",
          "... straight through to robustness()).", call. = FALSE)
   }
 
@@ -221,4 +345,53 @@ compare_robustness <- function(scenario_list, index = "GC") {
     )
   }, numeric(1))
   data.frame(Scenario = names(scenario_list), R_index = r_index, row.names = NULL)
+}
+
+# --- 5. Null-distribution R-index (mean across replicates) -----------------
+#' Null-distribution R-index (mean across replicates)
+#'
+#' Computes [robustness_index()] separately for each replicate in a null
+#' distribution (from [robustness_null_removal()] or
+#' [robustness_null_structural()]), then averages across replicates. This is
+#' the appropriate way to get a single-number R-index baseline for a null
+#' model -- see Details for why it's *not* equivalent to computing the
+#' R-index of an already-averaged curve.
+#'
+#' @details
+#' For [robustness_null_removal()] specifically (fixed network, only removal
+#' order randomised), the intact-network value at `N = 1` is identical
+#' across every replicate, which makes the R-index a linear functional of
+#' the curve -- so in that one case, `mean(R-index per replicate)` happens
+#' to equal `robustness_index()` computed on the mean curve. That
+#' equivalence breaks for [robustness_null_structural()], where each
+#' replicate is a *different* rewired graph (so the intact-network value
+#' varies by replicate too). Averaging replicate-level R-index values, as
+#' this function does, stays correct for both null models -- which is why
+#' it's implemented this way rather than as a shortcut through an
+#' already-averaged curve.
+#'
+#' Reporting the mean R-index across many random realisations is standard
+#' practice in the R-index literature (see [robustness_index()], and
+#' Schneider et al. 2011 for the index itself); this function is the
+#' multi-replicate counterpart, meant to sit alongside [compare_robustness()]
+#' (which summarises single, deterministic attack curves) when building a
+#' scenario comparison table that also includes a randomised baseline.
+#'
+#' @param null_df Output of [robustness_null_removal()] or
+#'   [robustness_null_structural()] (wide format, with a `rep` column).
+#' @param index Name of the indicator column to summarise (default `"GC"`).
+#'
+#' @return A single numeric value: the mean R-index across replicates.
+#'
+#' @seealso [robustness_index()], [compare_robustness()],
+#'   [robustness_null_removal()], [robustness_null_structural()]
+#' @export
+robustness_index_null <- function(null_df, index = "GC") {
+  if (!index %in% names(null_df)) {
+    stop("index = \"", index, "\" not found in null_df. Available columns: ",
+         paste(setdiff(names(null_df), c("N", "rep")), collapse = ", "), ".", call. = FALSE)
+  }
+  reps <- split(null_df[, c("N", index)], null_df$rep)
+  r_index <- vapply(reps, robustness_index, numeric(1), index = index)
+  mean(r_index, na.rm = TRUE)
 }

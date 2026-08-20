@@ -10,9 +10,9 @@ compare_to_null(observed, null_df)
 \item{observed}{Output of \code{\link[=robustness]{robustness()}} for the scenario you want to
 test (e.g. an \verb{attack_by_*()} curve).}
 
-\item{null_df}{Output of \code{\link[=robustness_null]{robustness_null()}} (the raw, wide-format
+\item{null_df}{Output of \code{\link[=robustness_null_removal]{robustness_null_removal()}} (the raw, wide-format
 replicates -- not the \code{\link[=summarise_null]{summarise_null()}} envelope). Must have been
-built with the same indicators as \code{observed} (see \code{\link[=robustness_null]{robustness_null()}}'s
+built with the same indicators as \code{observed} (see \code{\link[=robustness_null_removal]{robustness_null_removal()}}'s
 \code{...} argument) -- if \code{observed} has an indicator column \code{null_df}
 doesn't, this errors rather than silently comparing only the columns
 that happen to match.}
@@ -24,12 +24,12 @@ one row per indicator per removal step.
 \description{
 For every removal step and every indicator, computes the two-sided
 empirical p-value: the fraction of null replicates (from
-\code{\link[=robustness_null]{robustness_null()}}) at least as far from the null's own mean as the
+\code{\link[=robustness_null_removal]{robustness_null_removal()}}) at least as far from the null's own mean as the
 observed value is. A small p-value at a given step means the observed
 curve (e.g. a targeted attack) is unusually extreme compared to what
 random failures alone would produce at that same number of nodes
 removed.
 }
 \seealso{
-\code{\link[=robustness_null]{robustness_null()}}, \code{\link[=robustness]{robustness()}}
+\code{\link[=robustness_null_removal]{robustness_null_removal()}}, \code{\link[=robustness]{robustness()}}
 }

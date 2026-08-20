@@ -20,10 +20,10 @@ independently of any structural property. Internally reuses
 \code{\link[=removal_order]{removal_order()}} by treating a random permutation as if it were a
 centrality vector -- this keeps \code{random_failures()} structurally
 identical to every \verb{attack_by_*()} function, so \code{\link[=robustness]{robustness()}} and
-\code{\link[=robustness_null]{robustness_null()}} don't need to know whether an order came from chance
+\code{\link[=robustness_null_removal]{robustness_null_removal()}} don't need to know whether an order came from chance
 or from a targeted attack criterion.
 }
 \seealso{
-\code{\link[=removal_order]{removal_order()}}, \code{\link[=robustness_null]{robustness_null()}} (runs many replicates of
+\code{\link[=removal_order]{removal_order()}}, \code{\link[=robustness_null_removal]{robustness_null_removal()}} (runs many replicates of
 this function to build the statistical null distribution)
 }

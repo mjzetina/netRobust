@@ -14,10 +14,20 @@ plot_robustness(
 }
 \arguments{
 \item{failure, attack}{Output of \code{\link[=robustness]{robustness()}} for the failure and
-attack scenarios, respectively.}
+attack scenarios, respectively. When plotting against a null model,
+\code{failure} should be the \emph{median} curve from that null distribution
+rather than a single \code{\link[=random_failures]{random_failures()}} draw -- e.g.
+\code{tidyr::pivot_wider(null_envelope, id_cols = N, names_from = Index, values_from = median)} -- since a lone random draw isn't a meaningful
+representative of the null once you already have many replicates of it.
+The legend/caption reflect this automatically when \code{null_envelope} is
+supplied (see \code{null_envelope} below).}
 
 \item{null_envelope}{Optional output of \code{\link[=summarise_null]{summarise_null()}}. If supplied,
-drawn as a shaded 95\% reference band behind the curves.}
+drawn as a shaded 95\% reference band behind the curves, and the
+\code{failure} curve is labelled "Failures (median)" in the legend/caption
+(on the assumption that \code{failure} is that null's median curve, per
+above) instead of the plain "Failures" used when no null model is
+involved.}
 
 \item{scenario_colors}{Named character vector of two hex colours, named
 \code{"Attack"} and \code{"Failures"}, controlling the curve colours. Defaults
@@ -35,7 +45,7 @@ A \code{ggplot} object (add further layers/themes with \code{+} as usual).
 \description{
 Draws the failure and attack robustness curves side by side, one panel
 per indicator, optionally with a shaded Monte Carlo null envelope
-(see \code{\link[=robustness_null]{robustness_null()}} / \code{\link[=summarise_null]{summarise_null()}}) behind them.
+(see \code{\link[=robustness_null_removal]{robustness_null_removal()}} / \code{\link[=summarise_null]{summarise_null()}}) behind them.
 }
 \details{
 If any indicator has \code{NA} values at some removal steps (common once the
@@ -45,5 +55,5 @@ the specific scenario/indicator/step count affected, before ggplot2's
 own generic "Removed N rows..." warnings fire at print time.
 }
 \seealso{
-\code{\link[=robustness]{robustness()}}, \code{\link[=robustness_null]{robustness_null()}}, \code{\link[=summarise_null]{summarise_null()}}
+\code{\link[=robustness]{robustness()}}, \code{\link[=robustness_null_removal]{robustness_null_removal()}}, \code{\link[=summarise_null]{summarise_null()}}
 }

@@ -24,4 +24,5 @@ Imports:
     tidyr,
     utils
 Suggests:
-    future.apply
+    future.apply,
+    progressr

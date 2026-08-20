@@ -50,7 +50,7 @@
 #' step as [robustness()] removes nodes.) igraph also emits a warning
 #' whenever it has to do this component-wise calculation, which would flood
 #' the console if `g` is disconnected and this is called across thousands of
-#' Monte Carlo replicates (see [robustness_null()]) -- that warning is
+#' Monte Carlo replicates (see [robustness_null_removal()]) -- that warning is
 #' intentionally suppressed.
 #'
 #' @return A named integer vector in removal order, as produced by
