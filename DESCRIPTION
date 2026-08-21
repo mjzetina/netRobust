@@ -25,4 +25,7 @@ Imports:
     utils
 Suggests:
     future.apply,
-    progressr
+    knitr,
+    progressr,
+    rmarkdown
+VignetteBuilder: knitr

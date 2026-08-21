@@ -1,0 +1,284 @@
+---
+title: "Network robustness workflow"
+subtitle: "netRobust `r packageVersion('netRobust')`"
+author: "Manuel J. Zetina-Rejón"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Network robustness workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Introduction
+
+How well does a network keep functioning as its nodes disappear? Albert,
+Jeong & Barabasi (2000) <doi:10.1038/35019019> showed that many real
+networks respond very differently to two kinds of node loss: **random
+failure**, where nodes disappear independently of any property of the
+network, and **targeted attack**, where the most "important" nodes (by
+degree, betweenness, or another centrality) are removed first. Some
+networks barely notice random failure but collapse quickly under a
+targeted attack on their hubs.
+
+netRobust simulates both scenarios on any `igraph` object -- directed or
+undirected, weighted or not -- tracks a set of robustness indicators
+(giant component size, average path length, connectivity, and others) as
+nodes are removed, and provides a Monte Carlo framework for asking
+whether an observed curve is *statistically* more damaging than chance
+alone would produce. This vignette walks through that full workflow, end
+to end, on a small, well-known example network.
+
+## Setup
+
+```{r setup, message = FALSE}
+library(netRobust)
+library(igraph)
+```
+
+One dependency is optional and only changes *how* the Monte Carlo
+simulations run, never their results:
+
+```{r, eval = FALSE}
+future::plan(future::multisession)   # parallelise replicates across cores
+```
+
+Sequential replicates already show a console progress indicator (a
+spinner and percentage) with no setup needed -- it's skipped when
+running in parallel, since a `future.apply` worker has no access to the
+parent session's console.
+
+## Example network: Zachary's Karate Club
+
+We'll use Zachary's Karate Club, one of the most familiar example
+networks in network science: 34 members of a university karate club and
+the 78 friendships between them, recorded before the club famously split
+in two.
+
+```{r}
+g <- make_graph("Zachary")
+g
+```
+
+```{r}
+plot(g, vertex.label = NA, vertex.size = 8, vertex.color = "steelblue",
+     edge.color = "grey70", main = "Zachary's Karate Club")
+```
+
+It's undirected and unweighted, which keeps most of the workflow below
+free of extra arguments. Section
+["A note on direction and weights"](#a-note-on-direction-and-weights)
+covers what changes for directed/weighted networks.
+
+## Removal orders
+
+Every scenario in netRobust starts from a **removal order**: which
+vertex goes first, second, and so on. `random_failures()` generates a
+uniformly random order; `attack_by_degree()` removes the highest-degree
+("hub") vertices first, the classic attack criterion from Albert et al.
+(2000).
+
+```{r}
+set.seed(1)
+r <- random_failures(g)
+d <- attack_by_degree(g)
+head(d)
+```
+
+Both return the same shape: a named integer vector, first element =
+first vertex removed. Four more targeted-attack criteria exist --
+`attack_by_betweenness()`, `attack_by_closeness()`,
+`attack_by_eigenvector()`, and `attack_by_pagerank()` -- with the same
+`function(g) -> removal order` contract. They come back in
+["Statistical comparison across attack strategies"](#statistical-comparison-across-attack-strategies).
+
+## A note on direction and weights
+
+On a directed graph, "degree" is ambiguous: a vertex can have many
+incoming connections and few outgoing ones, or vice versa. Every
+`attack_by_*()` function exposes `mode = c("all", "out", "in")` (ignored
+on undirected graphs, like the Karate Club above) to control which one
+drives the attack. To see why this matters, take a tiny directed toy
+graph with one "out-hub" and one "in-hub":
+
+```{r}
+toy <- graph_from_literal(A -+ B, A -+ C, A -+ D, B -+ D, C -+ D, E -+ D)
+```
+
+```{r}
+plot(toy, edge.arrow.size = 0.6, vertex.color = "steelblue",
+     main = "A has the highest out-degree, D the highest in-degree")
+```
+
+```{r}
+attack_by_degree(toy, mode = "out")   # A goes first: highest out-degree
+attack_by_degree(toy, mode = "in")    # D goes first: highest in-degree
+```
+
+Same graph, same criterion (degree), opposite first casualty -- purely
+because of which direction "degree" was counted in. `robustness()` and
+the `attack_by_*()` functions default to `directed = NULL`, which
+auto-detects from `is_directed(g)`; pass `directed =` explicitly only to
+override that.
+
+The betweenness/closeness/eigenvector/PageRank attacks take a parallel
+`weights_as = c("distance", "strength")` argument for *weighted*
+networks, telling netRobust how to interpret an edge weight: as a
+**distance** (bigger weight = farther apart, used as-is) or as a
+**strength** (bigger weight = closer/stronger tie, inverted before
+being used as a distance). Both `toy` and the Karate Club above have no
+weights, so this has no effect on the examples in this vignette --
+this argument only matters once `E(g)$weight` is set.
+
+## Robustness curves
+
+`robustness()` takes a removal order and returns one row per removal
+step, with one column per indicator. `keep =` picks a subset of the
+built-in indicators (see `?robustness` for the full default set, and how
+to add your own via `indicators =`):
+
+```{r}
+failure <- robustness(g, ids = r, keep = c("GC", "APL", "Connectivity"))
+attack  <- robustness(g, ids = d, keep = c("GC", "APL", "Connectivity"))
+head(attack)
+```
+
+`GC` (giant component size) already tells a story: removing hub nodes
+by degree shrinks it far faster than removing the same number of random
+nodes. But `failure` here is a single random draw -- one arbitrary
+sample out of the enormous space of possible removal orders. The next
+section builds the full distribution instead of relying on one sample.
+
+## Building a null model
+
+`robustness_null_removal()` repeats `random_failures()` +
+`robustness()` many times on the *same* network, producing the
+empirical distribution of every indicator at every removal step --
+i.e., what random failure alone typically looks like, and how much it
+varies. `summarise_null()` collapses that into a mean/median and a 95%
+quantile envelope, ready for plotting.
+
+```{r}
+null_dist <- robustness_null_removal(g, n_reps = 200, seed = 123,
+                                      keep = c("GC", "APL", "Connectivity"))
+null_env  <- summarise_null(null_dist)
+head(null_env)
+```
+
+The `...` in `robustness_null_removal(g, ..., keep = c(...))` must match
+whatever settings were used for the observed curve it will be compared
+against (here, `attack`) -- same indicators, same `directed =`/weights
+treatment -- for the comparison to be valid.
+
+## Plotting
+
+A single random draw isn't a meaningful stand-in for "the failure
+scenario" once hundreds of replicates of it already exist. So instead of
+plotting one arbitrary `failure` curve, we plot the null distribution's
+**median** curve -- reshaping `summarise_null()`'s long-format output
+back into the wide, per-indicator shape `robustness()` produces:
+
+```{r}
+failure_median <- tidyr::pivot_wider(null_env, id_cols = N,
+                                      names_from = Index, values_from = median)
+```
+
+```{r, warning = FALSE}
+fig <- plot_robustness(failure = failure_median, attack = attack,
+                        null_envelope = null_env)
+fig
+```
+
+When `null_envelope` is supplied, `plot_robustness()` automatically
+labels that curve "Failures (median)" and adds a caption explaining the
+shaded band -- no need to track that distinction by hand.
+
+## Statistical comparison across attack strategies
+
+Two complementary questions remain: *at which removal step* does the
+attack become significantly worse than random failure, and *overall*,
+how much worse is it -- and how does that compare across all five attack
+criteria?
+
+`compare_to_null()` answers the first, step by step, with an empirical
+p-value per indicator:
+
+```{r}
+sig <- compare_to_null(attack, null_dist)
+head(sig[order(sig$p_value), ])
+```
+
+For the second, `robustness_index()` reduces a whole curve to one
+number -- the R-index of Schneider et al. (2011): the mean of an
+indicator's curve, normalised to its intact-network value (`1` = no
+degradation at all, near `0` = the network collapses almost
+immediately). `compare_robustness()` applies it across several
+deterministic attack curves at once; `robustness_index_null()` is its
+counterpart for a null distribution's many replicates (averaging the
+R-index *per replicate*, not the R-index of an already-averaged curve --
+see `?robustness_index_null` for why that distinction matters).
+
+```{r}
+b <- attack_by_betweenness(g)
+c <- attack_by_closeness(g)
+e <- attack_by_eigenvector(g)
+p <- attack_by_pagerank(g)
+
+attack_b <- robustness(g, ids = b, keep = c("GC", "APL", "Connectivity"))
+attack_c <- robustness(g, ids = c, keep = c("GC", "APL", "Connectivity"))
+attack_e <- robustness(g, ids = e, keep = c("GC", "APL", "Connectivity"))
+attack_p <- robustness(g, ids = p, keep = c("GC", "APL", "Connectivity"))
+
+r_index_attacks <- compare_robustness(scenario_list = list(
+  Degree = attack, Betweenness = attack_b, Closeness = attack_c,
+  Eigenvector = attack_e, PageRank = attack_p
+), index = "GC")
+
+r_index_failures <- data.frame(Scenario = "Failures",
+                                R_index = robustness_index_null(null_dist, index = "GC"))
+
+rbind(r_index_failures, r_index_attacks)
+```
+
+Every targeted attack scores well below random failure on this network
+-- the Karate Club, like most real networks with a handful of highly
+connected hubs, is far more vulnerable to targeted attacks than to
+random ones.
+
+## Structural null model
+
+`robustness_null_removal()` asks: *given this exact network, does this
+attack strategy do more damage than chance?* A different question is:
+*is this network's structure itself unusually vulnerable to this attack
+strategy, compared to other networks the same size with the same degree
+sequence?* `robustness_null_structural()` answers that one instead, by
+rewiring the network (preserving each vertex's degree) rather than
+randomising the removal order:
+
+```{r}
+struct_null <- robustness_null_structural(g, attack_fn = attack_by_degree,
+                                           n_reps = 200, seed = 123,
+                                           keep = c("GC", "APL", "Connectivity"))
+robustness_index_null(struct_null, index = "GC")
+```
+
+This is a **pure topological** null model: edge weights, if any, are
+dropped before rewiring, since there's no principled way to carry them
+over onto a randomised topology. Pass a weight-agnostic `attack_fn` (like
+`attack_by_degree` above) when using it.
+
+## Where to go next
+
+Every function used here has a `?` help page with the full set of
+arguments and further detail -- start with `?robustness`,
+`?robustness_null_removal`, and `?robustness_null_structural` -- or
+browse everything at once with `help(package = "netRobust")`.
