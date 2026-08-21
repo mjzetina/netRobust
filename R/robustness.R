@@ -295,6 +295,55 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
   full
 }
 
+# --- Indicator lookup table --------------------------------------------
+#' List all robustness indicators available to robustness()
+#'
+#' A lookup table describing every indicator [robustness()] knows about:
+#' the built-in defaults (always computed unless dropped via `exclude=`/
+#' `keep=`) and the opt-in `optional`/`custom=` set from
+#' [optional_robustness_indicators()], plus what each one requires of the
+#' network, if anything. This is the single source of truth for indicator
+#' descriptions -- `?robustness`'s "Available indicators" section lists
+#' just the names, and points here for detail, so the two can't drift out
+#' of sync.
+#'
+#' @return A `data.frame` with columns `name`, `type` (`"default"` or
+#'   `"optional"`), `description`, and `requires` (`"directed"`,
+#'   `"weighted"`, or `NA` if the indicator has no such restriction).
+#'
+#' @examples
+#' list_indicators()
+#' list_indicators()[list_indicators()$type == "optional", ]
+#'
+#' @seealso [robustness()], [default_robustness_indicators()],
+#'   [optional_robustness_indicators()]
+#' @export
+list_indicators <- function() {
+  data.frame(
+    name = c(
+      "Diameter", "GC", "APL", "Density", "Centralization", "Clustering",
+      "Homophyly", "Connectivity",
+      "Radius", "Reciprocity", "Mean_topological_diversity"
+    ),
+    type = c(rep("default", 8L), rep("optional", 3L)),
+    description = c(
+      "Longest shortest path between any two reachable vertices (hop count, or weighted distance via weights_as=).",
+      "Size of the giant (largest) connected component.",
+      "Average shortest-path length across all reachable vertex pairs.",
+      "Proportion of possible edges that are actually present.",
+      "Freeman degree centralization: how unevenly degree is distributed across vertices (0 = regular graph, 1 = star).",
+      "Global transitivity: proportion of connected triples that form triangles.",
+      "Degree assortativity: do high-degree vertices preferentially connect to other high-degree vertices?",
+      "Giant component size, normalised to the intact network's reachable pairs (0-100%).",
+      "Minimum eccentricity: shortest path length from the most central vertex to its farthest vertex.",
+      "Proportion of edges that are reciprocated (mutual).",
+      "Mean normalised Shannon entropy of each vertex's incident edge weights (Eagle et al. 2010)."
+    ),
+    requires = c(rep(NA_character_, 9L), "directed", "weighted"),
+    stringsAsFactors = FALSE
+  )
+}
+
 #' Network robustness under sequential node removal
 #'
 #' Removes vertices from `g` one at a time, in the order given by `ids`
@@ -369,9 +418,17 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
 #'   `vcount(g)`), with one column per indicator plus `Connectivity`
 #'   (normalised to the intact graph).
 #'
+#' @section Available indicators:
+#' Default (always computed unless dropped via `exclude=`/`keep=`):
+#' `Diameter`, `GC`, `APL`, `Density`, `Centralization`, `Clustering`,
+#' `Homophyly`, `Connectivity`. Optional (opt-in via `custom=`/`optional=`):
+#' `Radius`, `Reciprocity` (directed graphs only), `Mean_topological_diversity`
+#' (weighted graphs only). See [list_indicators()] for what each one
+#' measures.
+#'
 #' @seealso [random_failures()], [attack_by_degree()],
 #'   [default_robustness_indicators()], [optional_robustness_indicators()],
-#'   [robustness_null_removal()]
+#'   [list_indicators()], [robustness_null_removal()]
 #' @export
 robustness <- function(g, ids, indicators = NULL, exclude = NULL, keep = NULL,
                         custom = NULL, optional = NULL,

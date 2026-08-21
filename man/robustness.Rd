@@ -105,8 +105,18 @@ removal. This is the core simulation function of the package: pass it a
 failure or attack order and it traces out the resulting robustness
 curve, one row per number of nodes removed.
 }
+\section{Available indicators}{
+
+Default (always computed unless dropped via \verb{exclude=}/\verb{keep=}):
+\code{Diameter}, \code{GC}, \code{APL}, \code{Density}, \code{Centralization}, \code{Clustering},
+\code{Homophyly}, \code{Connectivity}. Optional (opt-in via \verb{custom=}/\verb{optional=}):
+\code{Radius}, \code{Reciprocity} (directed graphs only), \code{Mean_topological_diversity}
+(weighted graphs only). See \code{\link[=list_indicators]{list_indicators()}} for what each one
+measures.
+}
+
 \seealso{
 \code{\link[=random_failures]{random_failures()}}, \code{\link[=attack_by_degree]{attack_by_degree()}},
 \code{\link[=default_robustness_indicators]{default_robustness_indicators()}}, \code{\link[=optional_robustness_indicators]{optional_robustness_indicators()}},
-\code{\link[=robustness_null_removal]{robustness_null_removal()}}
+\code{\link[=list_indicators]{list_indicators()}}, \code{\link[=robustness_null_removal]{robustness_null_removal()}}
 }

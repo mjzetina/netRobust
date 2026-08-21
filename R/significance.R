@@ -20,21 +20,27 @@
 # Requires: igraph (already used elsewhere). Uses future.apply for
 # parallel replicates if installed; falls back to plain lapply otherwise.
 #   install.packages("future.apply")
-# Uses progressr for an optional progress indicator, if installed:
-#   install.packages("progressr"); progressr::handlers(global = TRUE)
+# Reports a console progress indicator (spinner + percentage) while
+# replicates run sequentially -- see .console_progress() below.
 
 # --- 0. Progress reporting (internal) ---------------------------------------
-# Returns a callable p() that reports one step of progress via progressr if
-# it's installed and the caller has activated handlers (progressr::handlers()),
-# or a silent no-op otherwise. Works identically in sequential and
-# future.apply-parallel replicates -- progressr is designed to signal
-# across future workers without any extra plumbing here.
-.null_progressor <- function(n) {
-  if (requireNamespace("progressr", quietly = TRUE)) {
-    progressr::progressor(steps = n)
-  } else {
-    function(...) invisible(NULL)
-  }
+# A plain console spinner + percentage, no setup required. Only meaningful
+# for sequential replicates: a future.apply worker is a separate R process
+# with no access to the parent session's console, so this is only ever
+# called from the sequential branch (see use_parallel below), and only
+# prints in an interactive session -- never during R CMD check, a sourced
+# script, or a vignette/document build, where a \r-updating line would just
+# pollute the log.
+.spinner_chars <- c("|", "/", "-", "\\")
+
+.console_progress <- function(i, n) {
+  if (!interactive()) return(invisible(NULL))
+  ch  <- .spinner_chars[(i - 1L) %% length(.spinner_chars) + 1L]
+  pct <- round(100 * i / n)
+  cat(sprintf("\r%s %3d%% (%d/%d)", ch, pct, i, n))
+  if (i >= n) cat("\n")
+  utils::flush.console()
+  invisible(NULL)
 }
 
 # --- 1. Build the null distribution (removal-order randomisation) ----------
@@ -84,17 +90,16 @@
 #' @export
 robustness_null_removal <- function(g, n_reps = 500, parallel = TRUE, seed = NULL, ...) {
   if (!is.null(seed)) set.seed(seed)
-  p <- .null_progressor(n_reps)
+  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
 
   run_one <- function(i) {
     ids <- random_failures(g)
     res <- robustness(g, ids, ...)
     res$rep <- i
-    p()
+    if (!use_parallel) .console_progress(i, n_reps)
     res
   }
 
-  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
   reps <- if (use_parallel) {
     future.apply::future_lapply(seq_len(n_reps), run_one, future.seed = TRUE)
   } else {
@@ -105,8 +110,8 @@ robustness_null_removal <- function(g, n_reps = 500, parallel = TRUE, seed = NUL
 }
 # To run replicates in parallel across cores:
 #   future::plan(future::multisession)   # once, at the top of main.R
-# To see a progress bar (sequential or parallel):
-#   progressr::handlers(global = TRUE)   # once, at the top of main.R
+# (the console progress indicator only shows for sequential replicates --
+# see .console_progress() above for why)
 
 # --- 1b. Build the null distribution (structural randomisation) ------------
 #' Monte Carlo null distribution of robustness curves (structural randomisation)
@@ -157,7 +162,7 @@ robustness_null_structural <- function(g, attack_fn, n_reps = 500, rewire_niter 
                                         parallel = TRUE, seed = NULL, ...) {
   if (!is.null(seed)) set.seed(seed)
   if (is.null(rewire_niter)) rewire_niter <- 10 * ecount(g)
-  p <- .null_progressor(n_reps)
+  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
 
   # Weights are stripped by design (see Details) -- robustness()'s own
   # "weights_as has no effect on an unweighted graph" warning would otherwise
@@ -177,11 +182,10 @@ robustness_null_structural <- function(g, attack_fn, n_reps = 500, rewire_niter 
       }
     )
     res$rep <- i
-    p()
+    if (!use_parallel) .console_progress(i, n_reps)
     res
   }
 
-  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
   reps <- if (use_parallel) {
     future.apply::future_lapply(seq_len(n_reps), run_one, future.seed = TRUE)
   } else {
