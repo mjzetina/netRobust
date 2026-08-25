@@ -19,7 +19,7 @@ Not on CRAN yet. Install the development version from GitHub:
 
 ```r
 # install.packages("devtools")
-devtools::install_github("tu-usuario/netRobust")  # TODO: replace with your GitHub username
+devtools::install_github("mjzetina/netRobust")
 ```
 
 ## Quick example
