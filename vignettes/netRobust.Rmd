@@ -202,30 +202,47 @@ When `null_envelope` is supplied, `plot_robustness()` automatically
 labels that curve "Failures (median)" and adds a caption explaining the
 shaded band -- no need to track that distinction by hand.
 
-## Statistical comparison across attack strategies
+## Does the attack differ from random failure overall?
 
-Two complementary questions remain: *at which removal step* does the
-attack become significantly worse than random failure, and *overall*,
-how much worse is it -- and how does that compare across all five attack
-criteria?
+Two complementary questions can be asked of an attack curve: *does it
+differ from random failure at all*, taking the whole curve together, and
+*at which removal step* does that difference show up. This section
+answers the first (the global question); the next section answers the
+second (the pointwise one).
 
-`compare_to_null()` answers the first, step by step, with an empirical
-p-value per indicator:
+`robustness_index()` collapses a whole curve to one number -- the R-index
+of Schneider et al. (2011) <doi:10.1073/pnas.1009440108>, generalised
+here to any indicator (see `?robustness_index` for the formula). It's
+deliberately neutral about whether a higher or lower value is
+"good": for `GC` specifically it's bounded in `[0, 1]` (1 = the curve
+never moved from its intact-network value), but that bound and its
+reading don't carry over to every indicator -- `Diameter`/`APL`, for
+example, typically *increase* under attack before a network fragments,
+so their R-index can exceed 1 without anything having "improved".
+
+`compare_robustness_index_to_null()` compares one observed R-index
+against the null's own distribution of R-index values (one per
+replicate) and returns an empirical p-value -- a single verdict for the
+whole curve, with none of the multiple-comparisons issue that testing
+every removal step separately would carry:
 
 ```{r}
-sig <- compare_to_null(attack, null_dist)
-head(sig[order(sig$p_value), ])
+compare_robustness_index_to_null(attack, null_dist, index = "GC")
 ```
 
-For the second, `robustness_index()` reduces a whole curve to one
-number -- the R-index of Schneider et al. (2011): the mean of an
-indicator's curve, normalised to its intact-network value (`1` = no
-degradation at all, near `0` = the network collapses almost
-immediately). `compare_robustness()` applies it across several
-deterministic attack curves at once; `robustness_index_null()` is its
+The same comparison, visually -- a histogram of the null's R-index
+values, with the attack's own R-index marked as a dashed line:
+
+```{r, fig.height = 4}
+plot_r_index_null(null_dist, observed = attack, index = "GC")
+```
+
+`compare_robustness()` applies `robustness_index()` across several
+deterministic attack curves at once, for a descriptive (not yet
+statistical) side-by-side comparison; `robustness_index_null()` is its
 counterpart for a null distribution's many replicates (averaging the
 R-index *per replicate*, not the R-index of an already-averaged curve --
-see `?robustness_index_null` for why that distinction matters).
+see `?robustness_index_null` for why that distinction matters):
 
 ```{r}
 b <- attack_by_betweenness(g)
@@ -254,6 +271,21 @@ Every targeted attack scores well below random failure on this network
 connected hubs, is far more vulnerable to targeted attacks than to
 random ones.
 
+## Where along the curve does the difference show up?
+
+`compare_to_null()` answers the pointwise question: at *which* removal
+step does the attack become significantly worse than random failure,
+per indicator. It complements the R-index comparison above rather than
+repeating it -- one gives a single overall verdict, this one localises
+*where* along the curve a difference happens, at the cost of not
+correcting for testing many steps independently (`?compare_to_null` has
+the detail):
+
+```{r}
+sig <- compare_to_null(attack, null_dist)
+head(sig[order(sig$p_value), ])
+```
+
 ## Structural null model
 
 `robustness_null_removal()` asks: *given this exact network, does this
@@ -280,5 +312,6 @@ over onto a randomised topology. Pass a weight-agnostic `attack_fn` (like
 
 Every function used here has a `?` help page with the full set of
 arguments and further detail -- start with `?robustness`,
-`?robustness_null_removal`, and `?robustness_null_structural` -- or
-browse everything at once with `help(package = "netRobust")`.
+`?robustness_null_removal`, `?robustness_null_structural`, and
+`?compare_robustness_index_to_null` -- or browse everything at once with
+`help(package = "netRobust")`.

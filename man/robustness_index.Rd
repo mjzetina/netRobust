@@ -14,21 +14,39 @@ an argument was misplaced when building \code{scenario_list} for
 likely cause rather than a confusing "column not found".}
 
 \item{index}{Name of the indicator column to summarise (default \code{"GC"},
-the giant component -- the most common choice in the literature). If
-\code{res} doesn't have this column (e.g. it was excluded via \verb{exclude=}/
-\verb{keep=} when calling \code{\link[=robustness]{robustness()}}), this errors rather than
-silently returning \code{NaN}.}
+the giant component -- Schneider et al.'s original choice). If \code{res}
+doesn't have this column (e.g. it was excluded via \verb{exclude=}/\verb{keep=}
+when calling \code{\link[=robustness]{robustness()}}), this errors rather than silently
+returning \code{NaN}.}
 }
 \value{
 A single numeric value.
 }
 \description{
-R-index style summary (Schneider et al. 2011): the mean of an
-indicator's curve, normalised to its intact-network value. \code{1} means no
-degradation at all across the whole removal sequence; closer to \code{0}
-means the network collapses almost immediately. Useful to reduce a full
-robustness curve to one comparable number per scenario.
+Generalises the R-index of Schneider, Moreira, Andrade, Havlin & Herrmann
+(2011) \url{doi:10.1073/pnas.1009440108} -- originally defined for the giant
+component -- to any indicator column: the mean of an indicator's curve
+across the removal sequence, normalised to its intact-network value.
+}
+\details{
+\deqn{R = \frac{1}{N}\sum_{Q=1}^{N} \frac{X(Q)}{X(0)}}{R = mean(X(Q) / X(0))}
+
+where \eqn{X(Q)}{X(Q)} is the indicator's value after \eqn{Q}{Q} vertices
+have been removed, \eqn{X(0)}{X(0)} is its intact-network value, and
+\eqn{N}{N} is the number of removal steps.
+
+\code{R} describes how far an indicator's value, on average across the whole
+removal sequence, sits from its intact-network baseline -- deliberately
+neutral about whether that shift is desirable. For an indicator that can
+only shrink as vertices are removed (e.g. \code{GC}, \code{Connectivity}), \code{R} is
+bounded in \verb{[0, 1]}. Not every indicator is bounded this way: \code{Diameter}/
+\code{APL}, for instance, typically \emph{increase} before a network fragments
+(removing hubs forces remaining paths to route around them), so their
+\code{R} can exceed 1. Whether a higher or lower value matters, and in which
+direction, depends on what the indicator means for the network and
+question you're studying -- not on this function.
 }
 \seealso{
-\code{\link[=robustness]{robustness()}}, \code{\link[=compare_robustness]{compare_robustness()}}
+\code{\link[=robustness]{robustness()}}, \code{\link[=compare_robustness]{compare_robustness()}}, \code{\link[=robustness_index_null]{robustness_index_null()}},
+\code{\link[=compare_robustness_index_to_null]{compare_robustness_index_to_null()}}
 }

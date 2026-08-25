@@ -289,11 +289,27 @@ compare_to_null <- function(observed, null_df) {
 # --- 4. Single-number robustness index (area under the curve) --------------
 #' Robustness index (normalised area under an indicator's curve)
 #'
-#' R-index style summary (Schneider et al. 2011): the mean of an
-#' indicator's curve, normalised to its intact-network value. `1` means no
-#' degradation at all across the whole removal sequence; closer to `0`
-#' means the network collapses almost immediately. Useful to reduce a full
-#' robustness curve to one comparable number per scenario.
+#' Generalises the R-index of Schneider, Moreira, Andrade, Havlin & Herrmann
+#' (2011) <doi:10.1073/pnas.1009440108> -- originally defined for the giant
+#' component -- to any indicator column: the mean of an indicator's curve
+#' across the removal sequence, normalised to its intact-network value.
+#'
+#' \deqn{R = \frac{1}{N}\sum_{Q=1}^{N} \frac{X(Q)}{X(0)}}{R = mean(X(Q) / X(0))}
+#'
+#' where \eqn{X(Q)}{X(Q)} is the indicator's value after \eqn{Q}{Q} vertices
+#' have been removed, \eqn{X(0)}{X(0)} is its intact-network value, and
+#' \eqn{N}{N} is the number of removal steps.
+#'
+#' `R` describes how far an indicator's value, on average across the whole
+#' removal sequence, sits from its intact-network baseline -- deliberately
+#' neutral about whether that shift is desirable. For an indicator that can
+#' only shrink as vertices are removed (e.g. `GC`, `Connectivity`), `R` is
+#' bounded in `[0, 1]`. Not every indicator is bounded this way: `Diameter`/
+#' `APL`, for instance, typically *increase* before a network fragments
+#' (removing hubs forces remaining paths to route around them), so their
+#' `R` can exceed 1. Whether a higher or lower value matters, and in which
+#' direction, depends on what the indicator means for the network and
+#' question you're studying -- not on this function.
 #'
 #' @param res Output of [robustness()] for one scenario. Must be a
 #'   `data.frame` -- if it isn't (e.g. a plain string landed here because
@@ -301,14 +317,15 @@ compare_to_null <- function(observed, null_df) {
 #'   [compare_robustness()]), this errors with a message pointing at that
 #'   likely cause rather than a confusing "column not found".
 #' @param index Name of the indicator column to summarise (default `"GC"`,
-#'   the giant component -- the most common choice in the literature). If
-#'   `res` doesn't have this column (e.g. it was excluded via `exclude=`/
-#'   `keep=` when calling [robustness()]), this errors rather than
-#'   silently returning `NaN`.
+#'   the giant component -- Schneider et al.'s original choice). If `res`
+#'   doesn't have this column (e.g. it was excluded via `exclude=`/`keep=`
+#'   when calling [robustness()]), this errors rather than silently
+#'   returning `NaN`.
 #'
 #' @return A single numeric value.
 #'
-#' @seealso [robustness()], [compare_robustness()]
+#' @seealso [robustness()], [compare_robustness()], [robustness_index_null()],
+#'   [compare_robustness_index_to_null()]
 #' @export
 robustness_index <- function(res, index = "GC") {
   if (!is.data.frame(res)) {
@@ -351,7 +368,38 @@ compare_robustness <- function(scenario_list, index = "GC") {
   data.frame(Scenario = names(scenario_list), R_index = r_index, row.names = NULL)
 }
 
-# --- 5. Null-distribution R-index (mean across replicates) -----------------
+# --- 5. Per-replicate R-index (internal, shared) ----------------------------
+# Splits a null distribution into its replicates and computes robustness_index()
+# on each one -- the shared computation behind robustness_index_null(),
+# compare_robustness_index_to_null(), and plot_r_index_null(). Not exported:
+# the per-replicate vector itself isn't meant to be a user-facing deliverable
+# (there's nothing to read off ~500 raw numbers directly), it's the raw
+# material each of those three functions summarises for its own purpose.
+#
+# Detects the most likely way to end up here by mistake: passing
+# summarise_null()'s output (long format, an `Index` column, no `rep`
+# column) instead of the raw null distribution from robustness_null_removal()/
+# robustness_null_structural() (wide format, one column per indicator, a
+# `rep` column). Both objects get called "null_something" in typical code,
+# so this is an easy mix-up -- worth a specific message instead of the
+# generic "column not found" that `index` not matching would otherwise give.
+.robustness_index_per_replicate <- function(null_df, index = "GC") {
+  if ("Index" %in% names(null_df) && !("rep" %in% names(null_df))) {
+    stop("null_df looks like the output of summarise_null() (it has an ",
+         "`Index` column but no `rep` column), not a raw null distribution. ",
+         "Pass the object returned by robustness_null_removal() or ",
+         "robustness_null_structural() instead (the one you'd pass TO ",
+         "summarise_null(), not what it returns).", call. = FALSE)
+  }
+  if (!index %in% names(null_df)) {
+    stop("index = \"", index, "\" not found in null_df. Available columns: ",
+         paste(setdiff(names(null_df), c("N", "rep")), collapse = ", "), ".", call. = FALSE)
+  }
+  reps <- split(null_df[, c("N", index)], null_df$rep)
+  vapply(reps, robustness_index, numeric(1), index = index)
+}
+
+# --- 6. Null-distribution R-index (mean across replicates) -----------------
 #' Null-distribution R-index (mean across replicates)
 #'
 #' Computes [robustness_index()] separately for each replicate in a null
@@ -361,25 +409,33 @@ compare_robustness <- function(scenario_list, index = "GC") {
 #' model -- see Details for why it's *not* equivalent to computing the
 #' R-index of an already-averaged curve.
 #'
+#' \deqn{\bar{R} = \frac{1}{M}\sum_{m=1}^{M} R_m}{Rbar = mean(R_1, ..., R_M)}
+#'
+#' where \eqn{R_m}{R_m} is the R-index (see [robustness_index()]) of
+#' replicate \eqn{m}{m} and \eqn{M}{M} is the number of replicates
+#' (`n_reps`).
+#'
 #' @details
 #' For [robustness_null_removal()] specifically (fixed network, only removal
 #' order randomised), the intact-network value at `N = 1` is identical
 #' across every replicate, which makes the R-index a linear functional of
-#' the curve -- so in that one case, `mean(R-index per replicate)` happens
-#' to equal `robustness_index()` computed on the mean curve. That
-#' equivalence breaks for [robustness_null_structural()], where each
-#' replicate is a *different* rewired graph (so the intact-network value
-#' varies by replicate too). Averaging replicate-level R-index values, as
-#' this function does, stays correct for both null models -- which is why
-#' it's implemented this way rather than as a shortcut through an
+#' the curve -- so in that one case, \eqn{\bar{R}}{Rbar} happens to equal
+#' `robustness_index()` computed on the mean curve. That equivalence breaks
+#' for [robustness_null_structural()], where each replicate is a
+#' *different* rewired graph (so the intact-network value varies by
+#' replicate too). Averaging replicate-level R-index values, as this
+#' function does, stays correct for both null models -- which is why it's
+#' implemented this way rather than as a shortcut through an
 #' already-averaged curve.
 #'
 #' Reporting the mean R-index across many random realisations is standard
-#' practice in the R-index literature (see [robustness_index()], and
-#' Schneider et al. 2011 for the index itself); this function is the
-#' multi-replicate counterpart, meant to sit alongside [compare_robustness()]
-#' (which summarises single, deterministic attack curves) when building a
-#' scenario comparison table that also includes a randomised baseline.
+#' practice in the R-index literature; this function is the multi-replicate
+#' counterpart to [robustness_index()], meant to sit alongside
+#' [compare_robustness()] (which summarises single, deterministic attack
+#' curves) when building a scenario comparison table that also includes a
+#' randomised baseline. This gives you a single descriptive number, not a
+#' significance test -- for an empirical p-value against this same null
+#' distribution, see [compare_robustness_index_to_null()].
 #'
 #' @param null_df Output of [robustness_null_removal()] or
 #'   [robustness_null_structural()] (wide format, with a `rep` column).
@@ -388,14 +444,58 @@ compare_robustness <- function(scenario_list, index = "GC") {
 #' @return A single numeric value: the mean R-index across replicates.
 #'
 #' @seealso [robustness_index()], [compare_robustness()],
+#'   [compare_robustness_index_to_null()], [plot_r_index_null()],
 #'   [robustness_null_removal()], [robustness_null_structural()]
 #' @export
 robustness_index_null <- function(null_df, index = "GC") {
-  if (!index %in% names(null_df)) {
-    stop("index = \"", index, "\" not found in null_df. Available columns: ",
-         paste(setdiff(names(null_df), c("N", "rep")), collapse = ", "), ".", call. = FALSE)
-  }
-  reps <- split(null_df[, c("N", index)], null_df$rep)
-  r_index <- vapply(reps, robustness_index, numeric(1), index = index)
-  mean(r_index, na.rm = TRUE)
+  mean(.robustness_index_per_replicate(null_df, index = index), na.rm = TRUE)
+}
+
+# --- 7. Compare an observed R-index against the null (global test) ---------
+#' Compare an observed R-index against a null distribution
+#'
+#' Empirical p-value testing whether an observed scenario's R-index (from
+#' [robustness_index()]) is unusual compared to what a null model
+#' ([robustness_null_removal()]/[robustness_null_structural()]) would
+#' produce. This is the R-index counterpart to [compare_to_null()]'s
+#' pointwise, per-removal-step test, and answers a different question:
+#' not "at which removal steps does the curve differ from the null?"
+#' (that's [compare_to_null()]) but "does the whole curve, summarised as
+#' one number, differ from the null overall?" The two are complementary --
+#' see [robustness_index()] for why collapsing a curve to one number loses
+#' information about *where* along the curve a difference happens, even
+#' when it correctly detects *whether* there is one.
+#'
+#' The p-value uses the same two-sided, mean-centred empirical test as
+#' [compare_to_null()]: the fraction of the null's per-replicate R-index
+#' values at least as far from their own mean as `observed`'s R-index is.
+#'
+#' @param observed Output of [robustness()] for the scenario being tested
+#'   (e.g. an `attack_by_*()` curve).
+#' @param null_df Output of [robustness_null_removal()] or
+#'   [robustness_null_structural()] (the raw, wide-format replicates --
+#'   not [summarise_null()]'s output; passing that by mistake is a common
+#'   mix-up and errors with a specific message pointing at the fix).
+#' @param index Name of the indicator column to summarise (default `"GC"`).
+#'
+#' @return A one-row `data.frame` with columns `observed` (the observed
+#'   R-index), `null_mean` (the null distribution's mean R-index -- what
+#'   the p-value is centred on), `null_median` (a descriptive complement;
+#'   if it differs a lot from `null_mean`, that itself signals the null
+#'   R-index distribution is skewed), and `p_value`.
+#'
+#' @seealso [robustness_index()], [robustness_index_null()],
+#'   [compare_to_null()], [plot_r_index_null()]
+#' @export
+compare_robustness_index_to_null <- function(observed, null_df, index = "GC") {
+  obs_index <- robustness_index(observed, index = index)
+  null_vals <- .robustness_index_per_replicate(null_df, index = index)
+  center <- mean(null_vals, na.rm = TRUE)
+  p <- mean(abs(null_vals - center) >= abs(obs_index - center), na.rm = TRUE)
+  data.frame(
+    observed    = obs_index,
+    null_mean   = center,
+    null_median = stats::median(null_vals, na.rm = TRUE),
+    p_value     = p
+  )
 }

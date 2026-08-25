@@ -24,26 +24,35 @@ model -- see Details for why it's \emph{not} equivalent to computing the
 R-index of an already-averaged curve.
 }
 \details{
+\deqn{\bar{R} = \frac{1}{M}\sum_{m=1}^{M} R_m}{Rbar = mean(R_1, ..., R_M)}
+
+where \eqn{R_m}{R_m} is the R-index (see \code{\link[=robustness_index]{robustness_index()}}) of
+replicate \eqn{m}{m} and \eqn{M}{M} is the number of replicates
+(\code{n_reps}).
+
 For \code{\link[=robustness_null_removal]{robustness_null_removal()}} specifically (fixed network, only removal
 order randomised), the intact-network value at \code{N = 1} is identical
 across every replicate, which makes the R-index a linear functional of
-the curve -- so in that one case, \verb{mean(R-index per replicate)} happens
-to equal \code{robustness_index()} computed on the mean curve. That
-equivalence breaks for \code{\link[=robustness_null_structural]{robustness_null_structural()}}, where each
-replicate is a \emph{different} rewired graph (so the intact-network value
-varies by replicate too). Averaging replicate-level R-index values, as
-this function does, stays correct for both null models -- which is why
-it's implemented this way rather than as a shortcut through an
+the curve -- so in that one case, \eqn{\bar{R}}{Rbar} happens to equal
+\code{robustness_index()} computed on the mean curve. That equivalence breaks
+for \code{\link[=robustness_null_structural]{robustness_null_structural()}}, where each replicate is a
+\emph{different} rewired graph (so the intact-network value varies by
+replicate too). Averaging replicate-level R-index values, as this
+function does, stays correct for both null models -- which is why it's
+implemented this way rather than as a shortcut through an
 already-averaged curve.
 
 Reporting the mean R-index across many random realisations is standard
-practice in the R-index literature (see \code{\link[=robustness_index]{robustness_index()}}, and
-Schneider et al. 2011 for the index itself); this function is the
-multi-replicate counterpart, meant to sit alongside \code{\link[=compare_robustness]{compare_robustness()}}
-(which summarises single, deterministic attack curves) when building a
-scenario comparison table that also includes a randomised baseline.
+practice in the R-index literature; this function is the multi-replicate
+counterpart to \code{\link[=robustness_index]{robustness_index()}}, meant to sit alongside
+\code{\link[=compare_robustness]{compare_robustness()}} (which summarises single, deterministic attack
+curves) when building a scenario comparison table that also includes a
+randomised baseline. This gives you a single descriptive number, not a
+significance test -- for an empirical p-value against this same null
+distribution, see \code{\link[=compare_robustness_index_to_null]{compare_robustness_index_to_null()}}.
 }
 \seealso{
 \code{\link[=robustness_index]{robustness_index()}}, \code{\link[=compare_robustness]{compare_robustness()}},
+\code{\link[=compare_robustness_index_to_null]{compare_robustness_index_to_null()}}, \code{\link[=plot_r_index_null]{plot_r_index_null()}},
 \code{\link[=robustness_null_removal]{robustness_null_removal()}}, \code{\link[=robustness_null_structural]{robustness_null_structural()}}
 }
