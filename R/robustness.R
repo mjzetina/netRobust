@@ -295,6 +295,147 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
   full
 }
 
+# --- Shared argument/indicator resolution (internal) ------------------------
+# The setup logic behind robustness() and edge_robustness() that has nothing
+# to do with whether the thing being removed is a vertex or an edge: resolve
+# directed/mode, resolve which weights (if any) the distance-based indicators
+# use, bake them into g as an edge attribute, compute Connectivity's
+# intact-graph baseline, and assemble the final indicators list from
+# keep=/exclude=/optional=/custom=. Returns list(g=, indicators=) -- g comes
+# back with the baked-in weight attribute (if any) already set; the caller
+# still owns unit-specific validation (vertex vs. edge names) and the actual
+# .removal_curve() call with the right delete_fn.
+.resolve_robustness_setup <- function(g, indicators, exclude, keep, custom, optional,
+                                       directed, component_mode, mode, weights, weights_as) {
+  stopifnot(inherits(g, "igraph"))
+  if (is.null(directed)) {
+    directed <- is_directed(g)
+  } else if (directed && !is_directed(g)) {
+    warning("directed = TRUE was requested, but g is an undirected graph; ",
+            "directed has no effect on undirected graphs regardless of its value.")
+  }
+  if (is.null(mode)) mode <- if (directed) "out" else "all"
+
+  # Resolve which edge weights (if any) to use for the distance-based
+  # indicators (Diameter, APL, Connectivity). Unlike resolve_weights() (used
+  # by the attack_by_*() functions), the default here is deliberately
+  # unweighted/structural even on a weighted graph -- weighting is opt-in
+  # via weights_as/weights, not automatic.
+  dist_weights <- NA
+  if (!is.null(weights)) {
+    if (length(weights) != ecount(g)) {
+      stop("weights must have one value per edge: length(weights) = ", length(weights),
+           ", but ecount(g) = ", ecount(g), ".", call. = FALSE)
+    }
+    dist_weights <- weights
+  } else if (!is.null(weights_as)) {
+    if (!is_weighted(g)) {
+      warning("weights_as = \"", weights_as[1], "\" has no effect: g is an ",
+              "unweighted graph and weights = NULL. Pass an explicit weights ",
+              "vector if you want weighting to be applied.")
+    } else {
+      weights_as <- match.arg(weights_as, choices = c("distance", "strength"))
+      dist_weights <- if (weights_as == "distance") E(g)$weight else 1 / E(g)$weight
+    }
+  }
+
+  # Bake the resolved weights into g as an edge attribute BEFORE the removal
+  # loop starts, instead of carrying a plain numeric vector across steps --
+  # see default_robustness_indicators()'s weight_attr notes for why a static
+  # vector misaligns (or errors) once edges start disappearing along with
+  # removed nodes/edges. weight_attr is the attribute name to read per-step,
+  # or NA if no weighting was requested.
+  weight_attr <- NA
+  if (!identical(dist_weights, NA)) {
+    weight_attr <- ".robustness_weight"
+    g <- set_edge_attr(g, weight_attr, value = dist_weights)
+  }
+  get_weights <- function(gi) if (identical(weight_attr, NA)) NA else igraph::edge_attr(gi, weight_attr)
+
+  # Reference (intact-graph) reachable-pairs count, to normalise Connectivity.
+  # Uses the same mode/weights decision as Diameter/APL, so every
+  # distance-based indicator agrees on how to treat direction and weight.
+  # Computed here (before building `indicators`) so Connectivity can be
+  # added as a regular entry in that list -- subject to keep=/exclude=/
+  # custom= like every other indicator, instead of being hardcoded to
+  # always compute regardless of what the user asked for.
+  dist_full <- distances(g, mode = mode, weights = get_weights(g))
+  dist_full[!is.finite(dist_full)] <- 0
+  tot_full <- sum(dist_full > 0)
+
+  connectivity_indicator <- function(gi) {
+    dist_i <- distances(gi, mode = mode, weights = get_weights(gi))
+    dist_i[!is.finite(dist_i)] <- 0
+    if (tot_full > 0) sum(dist_i > 0) / tot_full * 100 else NA_real_
+  }
+
+  if (is.null(indicators)) {
+    indicators <- c(default_robustness_indicators(directed, component_mode, weight_attr),
+                     list(Connectivity = connectivity_indicator))
+    if (!is.null(keep))    indicators <- indicators[intersect(names(indicators), keep)]
+    if (!is.null(exclude)) indicators <- indicators[setdiff(names(indicators), exclude)]
+    if (!is.null(optional)) {
+      if (!isTRUE(optional) && !is.character(optional)) {
+        stop("optional must be TRUE or a character vector of names, e.g. ",
+             "optional = c(\"Radius\", \"Reciprocity\").", call. = FALSE)
+      }
+      # names = NULL (optional=TRUE) builds all of them; a character vector
+      # restricts BOTH which get built AND which applicability warnings can
+      # fire, so requesting only e.g. "Radius" never triggers
+      # Mean_topological_diversity's "will collapse" warning just because
+      # it happened to be inapplicable -- it was never requested.
+      req_names <- if (isTRUE(optional)) NULL else optional
+      indicators <- c(indicators, optional_robustness_indicators(g, names = req_names))
+    }
+    if (!is.null(custom))  indicators <- c(indicators, custom)
+  } else if (!is.list(indicators) || is.null(names(indicators)) ||
+             any(names(indicators) == "") || !all(vapply(indicators, is.function, logical(1)))) {
+    stop("indicators must be a named list of function(graph) -> scalar, e.g. ",
+         "list(GC = function(g) ...). To pick a subset of the default ",
+         "indicators instead, use keep=/exclude=, not indicators= -- e.g. ",
+         "robustness(g, ids, keep = c(\"GC\", \"APL\")).", call. = FALSE)
+  }
+
+  list(g = g, indicators = indicators)
+}
+
+# --- Shared removal-and-compute loop (internal) -----------------------------
+# The core simulation loop behind robustness() and edge_robustness(): starting
+# from g intact, delete one unit (vertex or edge) at a time -- by NAME,
+# robust to igraph's internal re-indexing after each deletion -- recomputing
+# every indicator after each step. delete_fn does the one-unit deletion
+# (delete_vertices for robustness(), delete_edges for edge_robustness());
+# everything specific to which unit is being removed (weight resolution,
+# name validation, Connectivity's baseline distance count) is the caller's
+# job and stays in robustness()/edge_robustness() respectively, since that's
+# where node-vs-edge specifics actually live -- this helper only knows how
+# to walk removal_names and build rows.
+.removal_curve <- function(g, removal_names, indicators, delete_fn) {
+  compute_row <- function(gi) {
+    Map(function(nm, f) {
+      tryCatch(f(gi), error = function(e) {
+        warning(nm, " failed and returned NA: ", conditionMessage(e), call. = FALSE)
+        NA_real_
+      })
+    }, names(indicators), indicators)
+  }
+
+  n <- length(removal_names)
+  rows <- vector("list", n + 1)
+  rows[[1]] <- c(list(N = 1), compute_row(g))
+
+  gi <- g
+  for (i in seq_len(n)) {
+    gi <- delete_fn(gi, removal_names[i])
+    rows[[i + 1]] <- c(list(N = i + 1), compute_row(gi))
+  }
+
+  df <- do.call(rbind.data.frame, rows)
+  df <- df[seq_len(n), ]  # drop the fully-emptied network, matches original behaviour
+  rownames(df) <- NULL
+  df
+}
+
 # --- Indicator lookup table --------------------------------------------
 #' List all robustness indicators available to robustness()
 #'
@@ -434,124 +575,18 @@ robustness <- function(g, ids, indicators = NULL, exclude = NULL, keep = NULL,
                         custom = NULL, optional = NULL,
                         directed = NULL, component_mode = "weak", mode = NULL,
                         weights = NULL, weights_as = NULL) {
-  stopifnot(inherits(g, "igraph"))
-  if (is.null(directed)) {
-    directed <- is_directed(g)
-  } else if (directed && !is_directed(g)) {
-    warning("directed = TRUE was requested, but g is an undirected graph; ",
-            "directed has no effect on undirected graphs regardless of its value.")
-  }
-  if (is.null(mode)) mode <- if (directed) "out" else "all"
+  setup <- .resolve_robustness_setup(g, indicators, exclude, keep, custom, optional,
+                                      directed, component_mode, mode, weights, weights_as)
+  g <- setup$g
 
-  # Resolve which edge weights (if any) to use for the distance-based
-  # indicators (Diameter, APL, Connectivity). Unlike resolve_weights() (used
-  # by the attack_by_*() functions), the default here is deliberately
-  # unweighted/structural even on a weighted graph -- weighting is opt-in
-  # via weights_as/weights, not automatic.
-  dist_weights <- NA
-  if (!is.null(weights)) {
-    if (length(weights) != ecount(g)) {
-      stop("weights must have one value per edge: length(weights) = ", length(weights),
-           ", but ecount(g) = ", ecount(g), ".", call. = FALSE)
-    }
-    dist_weights <- weights
-  } else if (!is.null(weights_as)) {
-    if (!is_weighted(g)) {
-      warning("weights_as = \"", weights_as[1], "\" has no effect: g is an ",
-              "unweighted graph and weights = NULL. Pass an explicit weights ",
-              "vector if you want weighting to be applied.")
-    } else {
-      weights_as <- match.arg(weights_as, choices = c("distance", "strength"))
-      dist_weights <- if (weights_as == "distance") E(g)$weight else 1 / E(g)$weight
-    }
-  }
-
-  # Bake the resolved weights into g as an edge attribute BEFORE the removal
-  # loop starts, instead of carrying a plain numeric vector across steps --
-  # see default_robustness_indicators()'s weight_attr notes for why a static
-  # vector misaligns (or errors) once edges start disappearing along with
-  # removed nodes. weight_attr is the attribute name to read per-step, or NA
-  # if no weighting was requested.
-  weight_attr <- NA
-  if (!identical(dist_weights, NA)) {
-    weight_attr <- ".robustness_weight"
-    g <- set_edge_attr(g, weight_attr, value = dist_weights)
-  }
-  get_weights <- function(gi) if (identical(weight_attr, NA)) NA else igraph::edge_attr(gi, weight_attr)
-
-  # Reference (intact-graph) reachable-pairs count, to normalise Connectivity.
-  # Uses the same mode/weights decision as Diameter/APL, so every
-  # distance-based indicator agrees on how to treat direction and weight.
-  # Computed here (before building `indicators`) so Connectivity can be
-  # added as a regular entry in that list -- subject to keep=/exclude=/
-  # custom= like every other indicator, instead of being hardcoded to
-  # always compute regardless of what the user asked for.
-  dist_full <- distances(g, mode = mode, weights = get_weights(g))
-  dist_full[!is.finite(dist_full)] <- 0
-  tot_full <- sum(dist_full > 0)
-
-  connectivity_indicator <- function(gi) {
-    dist_i <- distances(gi, mode = mode, weights = get_weights(gi))
-    dist_i[!is.finite(dist_i)] <- 0
-    if (tot_full > 0) sum(dist_i > 0) / tot_full * 100 else NA_real_
-  }
-
-  if (is.null(indicators)) {
-    indicators <- c(default_robustness_indicators(directed, component_mode, weight_attr),
-                     list(Connectivity = connectivity_indicator))
-    if (!is.null(keep))    indicators <- indicators[intersect(names(indicators), keep)]
-    if (!is.null(exclude)) indicators <- indicators[setdiff(names(indicators), exclude)]
-    if (!is.null(optional)) {
-      if (!isTRUE(optional) && !is.character(optional)) {
-        stop("optional must be TRUE or a character vector of names, e.g. ",
-             "optional = c(\"Radius\", \"Reciprocity\").", call. = FALSE)
-      }
-      # names = NULL (optional=TRUE) builds all of them; a character vector
-      # restricts BOTH which get built AND which applicability warnings can
-      # fire, so requesting only e.g. "Radius" never triggers
-      # Mean_topological_diversity's "will collapse" warning just because
-      # it happened to be inapplicable -- it was never requested.
-      req_names <- if (isTRUE(optional)) NULL else optional
-      indicators <- c(indicators, optional_robustness_indicators(g, names = req_names))
-    }
-    if (!is.null(custom))  indicators <- c(indicators, custom)
-  } else if (!is.list(indicators) || is.null(names(indicators)) ||
-             any(names(indicators) == "") || !all(vapply(indicators, is.function, logical(1)))) {
-    stop("indicators must be a named list of function(graph) -> scalar, e.g. ",
-         "list(GC = function(g) ...). To pick a subset of the default ",
-         "indicators instead, use keep=/exclude=, not indicators= -- e.g. ",
-         "robustness(g, ids, keep = c(\"GC\", \"APL\")).", call. = FALSE)
-  }
   if (is.null(V(g)$name)) V(g)$name <- paste0("node_", seq_len(vcount(g)))
 
   n <- vcount(g)
   removal_names <- names(ids)[seq_len(n)]
   stopifnot(all(removal_names %in% V(g)$name))
 
-  compute_row <- function(gi) {
-    Map(function(nm, f) {
-      tryCatch(f(gi), error = function(e) {
-        warning(nm, " failed and returned NA: ", conditionMessage(e), call. = FALSE)
-        NA_real_
-      })
-    }, names(indicators), indicators)
-  }
-
-  rows <- vector("list", n + 1)
-  rows[[1]] <- c(list(N = 1), compute_row(g))
-
-  gi <- g
-  for (i in seq_len(n)) {
-    # Delete ONE vertex from the already-shrunk graph, by NAME (robust to
-    # igraph's internal re-indexing after each deletion). This replaces the
-    # original approach of rebuilding delete_vertices(g, ids[1:i]) from the
-    # pristine graph, once per indicator, on every step.
-    gi <- delete_vertices(gi, removal_names[i])
-    rows[[i + 1]] <- c(list(N = i + 1), compute_row(gi))
-  }
-
-  df <- do.call(rbind.data.frame, rows)
-  df <- df[seq_len(n), ]  # drop the fully-emptied network, matches original behaviour
-  rownames(df) <- NULL
-  df
+  # Delete one vertex at a time from the already-shrunk graph, by NAME
+  # (robust to igraph's internal re-indexing after each deletion) -- see
+  # .removal_curve() above.
+  .removal_curve(g, removal_names, setup$indicators, delete_vertices)
 }
