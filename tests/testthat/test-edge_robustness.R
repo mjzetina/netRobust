@@ -58,6 +58,17 @@ test_that("attack_by_edge_weight(decreasing = FALSE) removes the weakest edge fi
   expect_true(paste(lightest_pair[1, 1], lightest_pair[1, 2], sep = "|") == names(ord)[1])
 })
 
+test_that("attack_by_edge_weight(weights_as = \"distance\") inverts before ranking", {
+  gw <- g
+  set.seed(1)
+  E(gw)$weight <- runif(ecount(gw))
+  # Under "distance" semantics, the LOWEST raw weight is the strongest tie,
+  # so it should be removed first when decreasing = TRUE (the default).
+  ord <- attack_by_edge_weight(gw, weights_as = "distance")
+  lightest_pair <- ends(gw, E(gw)[which.min(E(gw)$weight)])
+  expect_true(paste(lightest_pair[1, 1], lightest_pair[1, 2], sep = "|") == names(ord)[1])
+})
+
 test_that("parallel edges are collapsed by default, with a warning, summing weights", {
   el <- rbind(c("A", "B"), c("A", "B"), c("B", "C"))
   gp <- graph_from_edgelist(el, directed = TRUE)
