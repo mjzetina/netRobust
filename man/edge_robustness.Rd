@@ -66,6 +66,28 @@ of the network and how to measure it, not specific to whether a vertex
 or an edge is being removed. See \code{?robustness} for the full description
 of each.
 }
+\section{Density is order-invariant here}{
+
+Under edge removal, \code{Density} (edges / possible edges) depends only on
+\emph{how many} edges have been removed, never on \emph{which} ones -- the vertex
+set (and so the denominator) never changes, and every removed edge drops
+the numerator by exactly 1 regardless of which edge it was. Its curve is
+therefore mathematically identical across every edge-removal scenario on
+the same starting graph (random failure, any \verb{attack_by_edge_*()}
+criterion) -- not similar, identical. This is specific to \emph{edge}
+removal: under \code{\link[=robustness]{robustness()}}'s node removal, \code{Density}'s denominator
+shrinks with the vertex count and the numerator's drop per step depends
+on the removed node's degree, so it \emph{is} scenario-sensitive there. No
+other indicator shares this order-invariance for edge removal -- GC,
+APL, Diameter, Connectivity, Centralization, Clustering, Homophyly,
+Reciprocity, and Mean_topological_diversity all depend on which edges
+were removed, not just how many. Comparing \code{Density} statistically
+between edge-removal scenarios (\code{compare_to_null()},
+\code{compare_robustness_index_to_null()}) has no power here -- it can never
+show a difference, by construction, regardless of your data. Consider
+\code{exclude = "Density"} for that kind of comparison.
+}
+
 \seealso{
 \code{\link[=robustness]{robustness()}}, \code{\link[=random_edge_failures]{random_edge_failures()}},
 \code{\link[=attack_by_edge_betweenness]{attack_by_edge_betweenness()}}, \code{\link[=attack_by_edge_weight]{attack_by_edge_weight()}},
