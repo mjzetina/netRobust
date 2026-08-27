@@ -42,7 +42,7 @@ overrode one of them). \code{"error"} stops instead. See
 \value{
 A \code{data.frame}, one row per removal step (\code{N} = 1 .. \code{ecount(g)}
 after any parallel-edge collapse), with one column per indicator plus
-\code{Connectivity} (normalised to the intact graph) -- same shape as
+\code{connectivity} (normalised to the intact graph) -- same shape as
 \code{\link[=robustness]{robustness()}}'s output, so every downstream function that consumes it
 (\code{\link[=compare_to_null]{compare_to_null()}}, \code{\link[=robustness_index]{robustness_index()}},
 \code{\link[=compare_robustness_index_to_null]{compare_robustness_index_to_null()}}, \code{\link[=plot_robustness]{plot_robustness()}},
@@ -66,26 +66,26 @@ of the network and how to measure it, not specific to whether a vertex
 or an edge is being removed. See \code{?robustness} for the full description
 of each.
 }
-\section{Density is order-invariant here}{
+\section{edge_density is order-invariant here}{
 
-Under edge removal, \code{Density} (edges / possible edges) depends only on
+Under edge removal, \code{edge_density} (edges / possible edges) depends only on
 \emph{how many} edges have been removed, never on \emph{which} ones -- the vertex
 set (and so the denominator) never changes, and every removed edge drops
 the numerator by exactly 1 regardless of which edge it was. Its curve is
 therefore mathematically identical across every edge-removal scenario on
 the same starting graph (random failure, any \verb{attack_by_edge_*()}
 criterion) -- not similar, identical. This is specific to \emph{edge}
-removal: under \code{\link[=robustness]{robustness()}}'s node removal, \code{Density}'s denominator
+removal: under \code{\link[=robustness]{robustness()}}'s node removal, \code{edge_density}'s denominator
 shrinks with the vertex count and the numerator's drop per step depends
 on the removed node's degree, so it \emph{is} scenario-sensitive there. No
-other indicator shares this order-invariance for edge removal -- GC,
-APL, Diameter, Connectivity, Centralization, Clustering, Homophyly,
-Reciprocity, and Mean_topological_diversity all depend on which edges
-were removed, not just how many. Comparing \code{Density} statistically
+other indicator shares this order-invariance for edge removal -- giant_component_size,
+mean_distance, diameter, connectivity, degree_centralization, clustering, degree_assortativity,
+reciprocity, and mean_topological_diversity all depend on which edges
+were removed, not just how many. Comparing \code{edge_density} statistically
 between edge-removal scenarios (\code{compare_to_null()},
 \code{compare_robustness_index_to_null()}) has no power here -- it can never
 show a difference, by construction, regardless of your data. Consider
-\code{exclude = "Density"} for that kind of comparison.
+\code{exclude = "edge_density"} for that kind of comparison.
 }
 
 \seealso{

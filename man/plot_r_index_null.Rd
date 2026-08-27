@@ -4,7 +4,12 @@
 \alias{plot_r_index_null}
 \title{Plot a null R-index distribution against an observed value}
 \usage{
-plot_r_index_null(null_df, observed = NULL, index = "GC", bins = 30)
+plot_r_index_null(
+  null_df,
+  observed = NULL,
+  index = "giant_component_size",
+  bins = 30
+)
 }
 \arguments{
 \item{null_df}{Output of \code{\link[=robustness_null_removal]{robustness_null_removal()}} or
@@ -17,7 +22,7 @@ mark on the plot (e.g. an \verb{attack_by_*()} curve) -- drawn as a
 vertical line at its R-index. \code{NULL} (default) omits the line, e.g.
 to just inspect the null distribution's own shape.}
 
-\item{index}{Name of the indicator column to summarise (default \code{"GC"}).}
+\item{index}{Name of the indicator column to summarise (default \code{"giant_component_size"}).}
 
 \item{bins}{Number of histogram bins. Default \code{30}.}
 }

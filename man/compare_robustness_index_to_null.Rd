@@ -4,7 +4,11 @@
 \alias{compare_robustness_index_to_null}
 \title{Compare an observed R-index against a null distribution}
 \usage{
-compare_robustness_index_to_null(observed, null_df, index = "GC")
+compare_robustness_index_to_null(
+  observed,
+  null_df,
+  index = "giant_component_size"
+)
 }
 \arguments{
 \item{observed}{Output of \code{\link[=robustness]{robustness()}} for the scenario being tested
@@ -15,7 +19,7 @@ compare_robustness_index_to_null(observed, null_df, index = "GC")
 not \code{\link[=summarise_null]{summarise_null()}}'s output; passing that by mistake is a common
 mix-up and errors with a specific message pointing at the fix).}
 
-\item{index}{Name of the indicator column to summarise (default \code{"GC"}).}
+\item{index}{Name of the indicator column to summarise (default \code{"giant_component_size"}).}
 }
 \value{
 A one-row \code{data.frame} with columns \code{observed} (the observed

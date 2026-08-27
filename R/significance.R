@@ -77,8 +77,8 @@
 #'   settings as that curve -- same indicators, same directed/weights
 #'   treatment. Pass here whatever extra arguments you used when computing
 #'   the scenario you're testing against, e.g.
-#'   `robustness_null_removal(g, keep = c("GC", "APL"), directed = TRUE)` to
-#'   match `robustness(g, ids, keep = c("GC", "APL"), directed = TRUE)`.
+#'   `robustness_null_removal(g, keep = c("giant_component_size", "mean_distance"), directed = TRUE)` to
+#'   match `robustness(g, ids, keep = c("giant_component_size", "mean_distance"), directed = TRUE)`.
 #'
 #' @return A `data.frame` stacking all replicates: same columns as
 #'   [robustness()]'s output, plus `rep` identifying which replicate each
@@ -303,9 +303,9 @@ compare_to_null <- function(observed, null_df) {
 #' `R` describes how far an indicator's value, on average across the whole
 #' removal sequence, sits from its intact-network baseline -- deliberately
 #' neutral about whether that shift is desirable. For an indicator that can
-#' only shrink as vertices are removed (e.g. `GC`, `Connectivity`), `R` is
-#' bounded in `[0, 1]`. Not every indicator is bounded this way: `Diameter`/
-#' `APL`, for instance, typically *increase* before a network fragments
+#' only shrink as vertices are removed (e.g. `giant_component_size`, `connectivity`), `R` is
+#' bounded in `[0, 1]`. Not every indicator is bounded this way: `diameter`/
+#' `mean_distance`, for instance, typically *increase* before a network fragments
 #' (removing hubs forces remaining paths to route around them), so their
 #' `R` can exceed 1. Whether a higher or lower value matters, and in which
 #' direction, depends on what the indicator means for the network and
@@ -316,7 +316,7 @@ compare_to_null <- function(observed, null_df) {
 #'   an argument was misplaced when building `scenario_list` for
 #'   [compare_robustness()]), this errors with a message pointing at that
 #'   likely cause rather than a confusing "column not found".
-#' @param index Name of the indicator column to summarise (default `"GC"`,
+#' @param index Name of the indicator column to summarise (default `"giant_component_size"`,
 #'   the giant component -- Schneider et al.'s original choice). If `res`
 #'   doesn't have this column (e.g. it was excluded via `exclude=`/`keep=`
 #'   when calling [robustness()]), this errors rather than silently
@@ -327,7 +327,7 @@ compare_to_null <- function(observed, null_df) {
 #' @seealso [robustness()], [compare_robustness()], [robustness_index_null()],
 #'   [compare_robustness_index_to_null()]
 #' @export
-robustness_index <- function(res, index = "GC") {
+robustness_index <- function(res, index = "giant_component_size") {
   if (!is.data.frame(res)) {
     stop("res must be a data.frame returned by robustness() -- got a ",
          paste(class(res), collapse = "/"), ". This usually means an argument ",
@@ -351,14 +351,14 @@ robustness_index <- function(res, index = "GC") {
 #'
 #' @param scenario_list A named list of [robustness()] outputs, e.g.
 #'   `list(Failures = failure, Degree = attack, PageRank = resilience_pr)`.
-#' @param index Name of the indicator column to summarise (default `"GC"`).
+#' @param index Name of the indicator column to summarise (default `"giant_component_size"`).
 #'
 #' @return A `data.frame` with columns `Scenario` and `R_index`, one row
 #'   per element of `scenario_list`.
 #'
 #' @seealso [robustness_index()], [robustness()]
 #' @export
-compare_robustness <- function(scenario_list, index = "GC") {
+compare_robustness <- function(scenario_list, index = "giant_component_size") {
   r_index <- vapply(names(scenario_list), function(nm) {
     tryCatch(
       robustness_index(scenario_list[[nm]], index = index),
@@ -383,7 +383,7 @@ compare_robustness <- function(scenario_list, index = "GC") {
 # `rep` column). Both objects get called "null_something" in typical code,
 # so this is an easy mix-up -- worth a specific message instead of the
 # generic "column not found" that `index` not matching would otherwise give.
-.robustness_index_per_replicate <- function(null_df, index = "GC") {
+.robustness_index_per_replicate <- function(null_df, index = "giant_component_size") {
   if ("Index" %in% names(null_df) && !("rep" %in% names(null_df))) {
     stop("null_df looks like the output of summarise_null() (it has an ",
          "`Index` column but no `rep` column), not a raw null distribution. ",
@@ -439,7 +439,7 @@ compare_robustness <- function(scenario_list, index = "GC") {
 #'
 #' @param null_df Output of [robustness_null_removal()] or
 #'   [robustness_null_structural()] (wide format, with a `rep` column).
-#' @param index Name of the indicator column to summarise (default `"GC"`).
+#' @param index Name of the indicator column to summarise (default `"giant_component_size"`).
 #'
 #' @return A single numeric value: the mean R-index across replicates.
 #'
@@ -447,7 +447,7 @@ compare_robustness <- function(scenario_list, index = "GC") {
 #'   [compare_robustness_index_to_null()], [plot_r_index_null()],
 #'   [robustness_null_removal()], [robustness_null_structural()]
 #' @export
-robustness_index_null <- function(null_df, index = "GC") {
+robustness_index_null <- function(null_df, index = "giant_component_size") {
   mean(.robustness_index_per_replicate(null_df, index = index), na.rm = TRUE)
 }
 
@@ -476,7 +476,7 @@ robustness_index_null <- function(null_df, index = "GC") {
 #'   [robustness_null_structural()] (the raw, wide-format replicates --
 #'   not [summarise_null()]'s output; passing that by mistake is a common
 #'   mix-up and errors with a specific message pointing at the fix).
-#' @param index Name of the indicator column to summarise (default `"GC"`).
+#' @param index Name of the indicator column to summarise (default `"giant_component_size"`).
 #'
 #' @return A one-row `data.frame` with columns `observed` (the observed
 #'   R-index), `null_mean` (the null distribution's mean R-index -- what
@@ -487,7 +487,7 @@ robustness_index_null <- function(null_df, index = "GC") {
 #' @seealso [robustness_index()], [robustness_index_null()],
 #'   [compare_to_null()], [plot_r_index_null()]
 #' @export
-compare_robustness_index_to_null <- function(observed, null_df, index = "GC") {
+compare_robustness_index_to_null <- function(observed, null_df, index = "giant_component_size") {
   obs_index <- robustness_index(observed, index = index)
   null_vals <- .robustness_index_per_replicate(null_df, index = index)
   center <- mean(null_vals, na.rm = TRUE)

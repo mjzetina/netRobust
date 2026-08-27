@@ -4,7 +4,7 @@
 \alias{robustness_index}
 \title{Robustness index (normalised area under an indicator's curve)}
 \usage{
-robustness_index(res, index = "GC")
+robustness_index(res, index = "giant_component_size")
 }
 \arguments{
 \item{res}{Output of \code{\link[=robustness]{robustness()}} for one scenario. Must be a
@@ -13,7 +13,7 @@ an argument was misplaced when building \code{scenario_list} for
 \code{\link[=compare_robustness]{compare_robustness()}}), this errors with a message pointing at that
 likely cause rather than a confusing "column not found".}
 
-\item{index}{Name of the indicator column to summarise (default \code{"GC"},
+\item{index}{Name of the indicator column to summarise (default \code{"giant_component_size"},
 the giant component -- Schneider et al.'s original choice). If \code{res}
 doesn't have this column (e.g. it was excluded via \verb{exclude=}/\verb{keep=}
 when calling \code{\link[=robustness]{robustness()}}), this errors rather than silently
@@ -38,9 +38,9 @@ have been removed, \eqn{X(0)}{X(0)} is its intact-network value, and
 \code{R} describes how far an indicator's value, on average across the whole
 removal sequence, sits from its intact-network baseline -- deliberately
 neutral about whether that shift is desirable. For an indicator that can
-only shrink as vertices are removed (e.g. \code{GC}, \code{Connectivity}), \code{R} is
-bounded in \verb{[0, 1]}. Not every indicator is bounded this way: \code{Diameter}/
-\code{APL}, for instance, typically \emph{increase} before a network fragments
+only shrink as vertices are removed (e.g. \code{giant_component_size}, \code{connectivity}), \code{R} is
+bounded in \verb{[0, 1]}. Not every indicator is bounded this way: \code{diameter}/
+\code{mean_distance}, for instance, typically \emph{increase} before a network fragments
 (removing hubs forces remaining paths to route around them), so their
 \code{R} can exceed 1. Whether a higher or lower value matters, and in which
 direction, depends on what the indicator means for the network and

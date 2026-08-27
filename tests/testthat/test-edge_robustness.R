@@ -11,21 +11,21 @@ test_that("random_edge_failures() returns a full, edge-named removal order", {
   expect_true(all(grepl("\\|", names(ord))))
 })
 
-test_that("edge_robustness() removes edges only -- starts at the intact GC", {
+test_that("edge_robustness() removes edges only -- starts at the intact giant_component_size", {
   set.seed(1)
   ord <- random_edge_failures(g)
-  res <- edge_robustness(g, ids = ord, keep = c("GC", "Density"))
+  res <- edge_robustness(g, ids = ord, keep = c("giant_component_size", "edge_density"))
   expect_equal(nrow(res), ecount(g))
-  expect_equal(res$GC[1], vcount(g))  # no edges removed yet: still one giant component
-  expect_true(all(diff(res$Density) <= 1e-9))  # non-increasing as edges are removed
+  expect_equal(res$giant_component_size[1], vcount(g))  # no edges removed yet: still one giant component
+  expect_true(all(diff(res$edge_density) <= 1e-9))  # non-increasing as edges are removed
 })
 
 test_that("edge_robustness() output has the same shape as robustness()'s", {
   set.seed(1)
   d <- attack_by_degree(g)
-  node_res <- robustness(g, ids = d, keep = c("GC", "APL", "Connectivity"))
+  node_res <- robustness(g, ids = d, keep = c("giant_component_size", "mean_distance", "connectivity"))
   ord <- random_edge_failures(g)
-  edge_res <- edge_robustness(g, ids = ord, keep = c("GC", "APL", "Connectivity"))
+  edge_res <- edge_robustness(g, ids = ord, keep = c("giant_component_size", "mean_distance", "connectivity"))
   expect_equal(names(node_res), names(edge_res))
 })
 
@@ -87,8 +87,8 @@ test_that("on_parallel = \"error\" stops instead of collapsing", {
 test_that("robustness() is unaffected by the shared-loop refactor (regression check)", {
   set.seed(1)
   d <- attack_by_degree(g)
-  res <- robustness(g, ids = d, keep = c("GC"))
+  res <- robustness(g, ids = d, keep = c("giant_component_size"))
   expect_equal(nrow(res), vcount(g))
-  expect_equal(res$GC[1], vcount(g))
-  expect_true(all(diff(res$GC) <= 0))  # GC is non-increasing under node removal
+  expect_equal(res$giant_component_size[1], vcount(g))
+  expect_true(all(diff(res$giant_component_size) <= 0))  # giant_component_size is non-increasing under node removal
 })

@@ -36,31 +36,31 @@
 #'
 #' @return A `data.frame`, one row per removal step (`N` = 1 .. `ecount(g)`
 #'   after any parallel-edge collapse), with one column per indicator plus
-#'   `Connectivity` (normalised to the intact graph) -- same shape as
+#'   `connectivity` (normalised to the intact graph) -- same shape as
 #'   [robustness()]'s output, so every downstream function that consumes it
 #'   ([compare_to_null()], [robustness_index()],
 #'   [compare_robustness_index_to_null()], [plot_robustness()],
 #'   [plot_r_index_null()]...) works on edge-removal curves with no changes.
 #'
-#' @section Density is order-invariant here:
-#' Under edge removal, `Density` (edges / possible edges) depends only on
+#' @section edge_density is order-invariant here:
+#' Under edge removal, `edge_density` (edges / possible edges) depends only on
 #' *how many* edges have been removed, never on *which* ones -- the vertex
 #' set (and so the denominator) never changes, and every removed edge drops
 #' the numerator by exactly 1 regardless of which edge it was. Its curve is
 #' therefore mathematically identical across every edge-removal scenario on
 #' the same starting graph (random failure, any `attack_by_edge_*()`
 #' criterion) -- not similar, identical. This is specific to *edge*
-#' removal: under [robustness()]'s node removal, `Density`'s denominator
+#' removal: under [robustness()]'s node removal, `edge_density`'s denominator
 #' shrinks with the vertex count and the numerator's drop per step depends
 #' on the removed node's degree, so it *is* scenario-sensitive there. No
-#' other indicator shares this order-invariance for edge removal -- GC,
-#' APL, Diameter, Connectivity, Centralization, Clustering, Homophyly,
-#' Reciprocity, and Mean_topological_diversity all depend on which edges
-#' were removed, not just how many. Comparing `Density` statistically
+#' other indicator shares this order-invariance for edge removal -- giant_component_size,
+#' mean_distance, diameter, connectivity, degree_centralization, clustering, degree_assortativity,
+#' reciprocity, and mean_topological_diversity all depend on which edges
+#' were removed, not just how many. Comparing `edge_density` statistically
 #' between edge-removal scenarios (`compare_to_null()`,
 #' `compare_robustness_index_to_null()`) has no power here -- it can never
 #' show a difference, by construction, regardless of your data. Consider
-#' `exclude = "Density"` for that kind of comparison.
+#' `exclude = "edge_density"` for that kind of comparison.
 #'
 #' @seealso [robustness()], [random_edge_failures()],
 #'   [attack_by_edge_betweenness()], [attack_by_edge_weight()],

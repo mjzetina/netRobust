@@ -30,8 +30,8 @@ observed attack/failure curve, it must be built with the \emph{exact same}
 settings as that curve -- same indicators, same directed/weights
 treatment. Pass here whatever extra arguments you used when computing
 the scenario you're testing against, e.g.
-\code{robustness_null_removal(g, keep = c("GC", "APL"), directed = TRUE)} to
-match \code{robustness(g, ids, keep = c("GC", "APL"), directed = TRUE)}.}
+\code{robustness_null_removal(g, keep = c("giant_component_size", "mean_distance"), directed = TRUE)} to
+match \code{robustness(g, ids, keep = c("giant_component_size", "mean_distance"), directed = TRUE)}.}
 }
 \value{
 A \code{data.frame} stacking all replicates: same columns as

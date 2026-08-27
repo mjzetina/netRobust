@@ -17,7 +17,7 @@
 #'   mark on the plot (e.g. an `attack_by_*()` curve) -- drawn as a
 #'   vertical line at its R-index. `NULL` (default) omits the line, e.g.
 #'   to just inspect the null distribution's own shape.
-#' @param index Name of the indicator column to summarise (default `"GC"`).
+#' @param index Name of the indicator column to summarise (default `"giant_component_size"`).
 #' @param bins Number of histogram bins. Default `30`.
 #'
 #' @return A `ggplot` object (add further layers/themes with `+` as usual).
@@ -25,7 +25,7 @@
 #' @seealso [compare_robustness_index_to_null()], [robustness_index_null()],
 #'   [robustness_index()]
 #' @export
-plot_r_index_null <- function(null_df, observed = NULL, index = "GC", bins = 30) {
+plot_r_index_null <- function(null_df, observed = NULL, index = "giant_component_size", bins = 30) {
   null_vals <- .robustness_index_per_replicate(null_df, index = index)
   df <- data.frame(R_index = null_vals)
 

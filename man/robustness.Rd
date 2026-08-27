@@ -27,51 +27,51 @@ robustness(
 removal order.}
 
 \item{indicators}{Named list of \verb{function(graph) -> scalar}. Defaults to
-\code{\link[=default_robustness_indicators]{default_robustness_indicators()}} (plus \code{Connectivity}). To add/remove
+\code{\link[=default_robustness_indicators]{default_robustness_indicators()}} (plus \code{connectivity}). To add/remove
 an index for a single call, prefer \verb{exclude=}/\verb{keep=}/\verb{custom=} below;
 pass \verb{indicators=} directly only if you want to replace the whole
 default set.}
 
 \item{exclude}{Character vector of default indicator names to drop
-(e.g. \code{exclude = c("Homophyly", "Density")}). \code{"Connectivity"} is a
+(e.g. \code{exclude = c("degree_assortativity", "edge_density")}). \code{"connectivity"} is a
 valid name here too -- it's a regular entry in the default indicator
 set, not a special always-on column. Ignored if you also pass your
 own \verb{indicators=}.}
 
 \item{keep}{Character vector of default indicator names to keep -- the
-opposite of \verb{exclude=} (e.g. \code{keep = c("GC", "APL")} to compute only
-those two; note this also drops \code{"Connectivity"} unless you list it
+opposite of \verb{exclude=} (e.g. \code{keep = c("giant_component_size", "mean_distance")} to compute only
+those two; note this also drops \code{"connectivity"} unless you list it
 explicitly). Ignored if you also pass your own \verb{indicators=}. If both
 \verb{keep=} and \verb{exclude=} are given, \verb{keep=} is applied first.}
 
 \item{custom}{Named list of extra \verb{function(graph) -> scalar} indicators
-to add on top of the defaults (e.g. Radius, Reciprocity, Diversity --
+to add on top of the defaults (e.g. radius, reciprocity, Diversity --
 see \code{\link[=optional_robustness_indicators]{optional_robustness_indicators()}}). Ignored if you also pass your
 own \verb{indicators=}.}
 
 \item{optional}{Shortcut for adding entries from
 \code{\link[=optional_robustness_indicators]{optional_robustness_indicators()}} without calling it yourself and
 repeating \code{g}. \code{TRUE} adds every optional indicator that applies to
-\code{g}; a character vector (e.g. \code{c("Radius", "Reciprocity")}) adds just
+\code{g}; a character vector (e.g. \code{c("radius", "reciprocity")}) adds just
 those (an unknown name errors; a valid name that doesn't apply to \code{g}
 is dropped with its own warning). Internally forwards to
 \code{\link[=optional_robustness_indicators]{optional_robustness_indicators()}}'s \verb{names=} argument, so requesting
 a subset never triggers the applicability warning of an indicator you
 didn't ask for. Ignored if you also pass your own \verb{indicators=}.}
 
-\item{directed}{Should Diameter / APL / Centralization / Homophyly treat
+\item{directed}{Should diameter / mean_distance / degree_centralization / degree_assortativity treat
 the network as directed? Applied consistently across all of them.
 \code{NULL} (default) auto-detects from \code{g} via \code{is_directed()}. Passing
 \code{directed = TRUE} explicitly on a graph that isn't actually directed
 has no effect and triggers a warning.}
 
-\item{component_mode}{\code{"weak"}/\code{"strong"} for the \code{GC} indicator. Only
+\item{component_mode}{\code{"weak"}/\code{"strong"} for the \code{giant_component_size} indicator. Only
 relevant on directed graphs: \code{"weak"} ignores direction when defining
 a connected component; \code{"strong"} requires mutual reachability.}
 
-\item{mode}{\code{"all"}/\code{"out"}/\code{"in"} for distance-based \code{Connectivity}.
+\item{mode}{\code{"all"}/\code{"out"}/\code{"in"} for distance-based \code{connectivity}.
 \code{NULL} (default) picks \code{"out"} when directed, \code{"all"} otherwise,
-matching the directed/undirected treatment used for Diameter/APL so
+matching the directed/undirected treatment used for diameter/mean_distance so
 all distance-based indicators agree.}
 
 \item{weights}{Optional explicit numeric vector of edge weights (one per
@@ -79,7 +79,7 @@ edge, length \code{ecount(g)}). If supplied, always wins over
 \code{weights_as}/\code{E(g)$weight} -- same override pattern as
 \code{\link[=resolve_weights]{resolve_weights()}}, used by the \verb{attack_by_*()} functions.}
 
-\item{weights_as}{How Diameter/APL/Connectivity interpret \code{E(g)$weight}
+\item{weights_as}{How diameter/mean_distance/connectivity interpret \code{E(g)$weight}
 when \code{weights = NULL}. \code{NULL} (default) ignores weights entirely and
 works on unweighted topology (hop counts) -- the same purely
 structural treatment used throughout Albert et al. (2000), and the
@@ -94,7 +94,7 @@ convention as \code{\link[=attack_by_betweenness]{attack_by_betweenness()}}/\cod
 }
 \value{
 A \code{data.frame}, one row per removal step (\code{N} = 1 ..
-\code{vcount(g)}), with one column per indicator plus \code{Connectivity}
+\code{vcount(g)}), with one column per indicator plus \code{connectivity}
 (normalised to the intact graph).
 }
 \description{
@@ -108,9 +108,9 @@ curve, one row per number of nodes removed.
 \section{Available indicators}{
 
 Default (always computed unless dropped via \verb{exclude=}/\verb{keep=}):
-\code{Diameter}, \code{GC}, \code{APL}, \code{Density}, \code{Centralization}, \code{Clustering},
-\code{Homophyly}, \code{Connectivity}. Optional (opt-in via \verb{custom=}/\verb{optional=}):
-\code{Radius}, \code{Reciprocity} (directed graphs only), \code{Mean_topological_diversity}
+\code{diameter}, \code{giant_component_size}, \code{mean_distance}, \code{edge_density}, \code{degree_centralization}, \code{clustering},
+\code{degree_assortativity}, \code{connectivity}. Optional (opt-in via \verb{custom=}/\verb{optional=}):
+\code{radius}, \code{reciprocity} (directed graphs only), \code{mean_topological_diversity}
 (weighted graphs only). See \code{\link[=list_indicators]{list_indicators()}} for what each one
 measures.
 }

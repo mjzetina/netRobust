@@ -4,13 +4,13 @@
 \alias{compare_robustness}
 \title{Compare robustness indices across several removal scenarios}
 \usage{
-compare_robustness(scenario_list, index = "GC")
+compare_robustness(scenario_list, index = "giant_component_size")
 }
 \arguments{
 \item{scenario_list}{A named list of \code{\link[=robustness]{robustness()}} outputs, e.g.
 \code{list(Failures = failure, Degree = attack, PageRank = resilience_pr)}.}
 
-\item{index}{Name of the indicator column to summarise (default \code{"GC"}).}
+\item{index}{Name of the indicator column to summarise (default \code{"giant_component_size"}).}
 }
 \value{
 A \code{data.frame} with columns \code{Scenario} and \code{R_index}, one row

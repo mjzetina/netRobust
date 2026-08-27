@@ -13,47 +13,47 @@
 #                indicators= directly only if you want to replace the
 #                whole default set.
 #   exclude    : character vector of default indicator names to drop
-#                (e.g. exclude = c("Homophyly", "Density")). "Connectivity"
+#                (e.g. exclude = c("degree_assortativity", "edge_density")). "connectivity"
 #                is a valid name here too -- it's a regular entry in the
 #                default indicator set, not a special always-on column.
 #                Ignored if you also pass your own indicators=.
 #   keep       : character vector of default indicator names to keep --
-#                the opposite of exclude= (e.g. keep = c("GC", "APL") to
+#                the opposite of exclude= (e.g. keep = c("giant_component_size", "mean_distance") to
 #                compute only those two; note this also drops
-#                "Connectivity" unless you list it explicitly). Ignored if
+#                "connectivity" unless you list it explicitly). Ignored if
 #                you also pass your own indicators=. If both keep= and
 #                exclude= are given, keep= is applied first.
 #   custom     : named list of extra function(graph) -> scalar indicators
-#                to add on top of the defaults (e.g. Radius, Reciprocity,
+#                to add on top of the defaults (e.g. radius, reciprocity,
 #                Diversity -- see examples below). Ignored if you also
 #                pass your own indicators=.
 #   optional   : shortcut for adding entries from optional_robustness_
 #                indicators(g) without calling it yourself and repeating g.
 #                TRUE adds every optional indicator that applies to g;
-#                a character vector (e.g. c("Radius", "Reciprocity"))
+#                a character vector (e.g. c("radius", "reciprocity"))
 #                adds just those (an unknown name errors; a valid name
 #                that doesn't apply to g is dropped with its own warning).
 #                Internally forwards to optional_robustness_indicators()'s
 #                names= argument, so requesting a subset never triggers
 #                the applicability warning of an indicator you didn't ask
 #                for. Ignored if you also pass your own indicators=.
-#   directed   : should Diameter / APL / Centralization / Homophyly treat
+#   directed   : should diameter / mean_distance / degree_centralization / degree_assortativity treat
 #                the network as directed? Applied consistently across all
 #                of them (the original code mixed TRUE and FALSE). NULL
 #                (default) auto-detects from g via is_directed(). Passing
 #                directed = TRUE explicitly on a graph that isn't actually
 #                directed has no effect and triggers a warning.
-#   component_mode : "weak"/"strong" for the GC indicator (see robustness.R
+#   component_mode : "weak"/"strong" for the giant_component_size indicator (see robustness.R
 #                notes). Only relevant on directed graphs.
-#   mode       : "all"/"out"/"in" for distance-based Connectivity. NULL
+#   mode       : "all"/"out"/"in" for distance-based connectivity. NULL
 #                (default) picks "out" when directed, "all" otherwise,
 #                matching the directed/undirected treatment used for
-#                Diameter/APL so all distance-based indicators agree.
+#                diameter/mean_distance so all distance-based indicators agree.
 #   weights    : optional explicit numeric vector of edge weights (one per
 #                edge, length ecount(g)). If supplied, always wins over
 #                weights_as/E(g)$weight -- same override pattern as
 #                resolve_weights() used by the attack_by_*() functions.
-#   weights_as : how Diameter/APL/Connectivity interpret E(g)$weight when
+#   weights_as : how diameter/mean_distance/connectivity interpret E(g)$weight when
 #                weights = NULL. NULL (default) ignores weights entirely
 #                and works on unweighted topology (hop counts) -- the same
 #                purely structural treatment used throughout Albert et al.
@@ -70,7 +70,7 @@
 #
 # OUTPUT
 #   data.frame, one row per removal step (N = 1 .. vcount(g)), with one
-#   column per indicator plus Connectivity (normalised to the intact graph).
+#   column per indicator plus connectivity (normalised to the intact graph).
 
 # --- Default indicator set -------------------------------------------------
 # directed        : treat the network as directed? Only matters for graphs
@@ -78,11 +78,11 @@
 #                    automatically on undirected graphs, so it's safe to
 #                    leave at its auto-detected default in every case.
 # component_mode  : "weak" (ignore direction) or "strong" (mutual
-#                    reachability required) for the GC indicator. Only
+#                    reachability required) for the giant_component_size indicator. Only
 #                    relevant for directed graphs (governance hierarchies,
 #                    trophic flows...); ignored on undirected ones.
 # weight_attr     : name of an edge attribute to use as weights for
-#                    Diameter/APL, or NA (default) for unweighted hop
+#                    diameter/mean_distance, or NA (default) for unweighted hop
 #                    counts. Deliberately an ATTRIBUTE NAME, not a numeric
 #                    vector: these indicator functions get called on gi
 #                    (the network as it shrinks during removal), and a
@@ -96,18 +96,18 @@
 #' Default robustness indicator set
 #'
 #' Builds the named list of `function(graph) -> scalar` indicators used by
-#' [robustness()] when `indicators = NULL`: Diameter, GC (giant component
-#' size), APL (average path length), Density, Centralization, Clustering,
-#' and Homophyly.
+#' [robustness()] when `indicators = NULL`: diameter, giant_component_size,
+#' mean_distance, edge_density, degree_centralization, clustering, and
+#' degree_assortativity.
 #'
 #' @param directed Treat the network as directed? Only matters for graphs
 #'   that ARE directed -- igraph ignores this argument automatically on
 #'   undirected graphs, so it's safe to leave at its auto-detected default.
 #' @param component_mode `"weak"` (ignore direction) or `"strong"` (mutual
-#'   reachability required) for the `GC` indicator. Only relevant for
+#'   reachability required) for the `giant_component_size` indicator. Only relevant for
 #'   directed graphs; ignored on undirected ones.
 #' @param weight_attr Name of an edge attribute to use as weights for
-#'   Diameter/APL, or `NA` (default) for unweighted hop counts.
+#'   diameter/mean_distance, or `NA` (default) for unweighted hop counts.
 #'   Deliberately an attribute name, not a numeric vector: these indicator
 #'   functions get called on the network as it shrinks during removal, and
 #'   a static numeric vector sized for the original graph would misalign
@@ -120,13 +120,13 @@
 default_robustness_indicators <- function(directed = FALSE, component_mode = "weak", weight_attr = NA) {
   get_w <- function(gi) if (identical(weight_attr, NA)) NA else igraph::edge_attr(gi, weight_attr)
   list(
-    Diameter       = function(g) diameter(g, directed = directed, weights = get_w(g), unconnected = TRUE),
-    GC             = function(g) { cs <- components(g, mode = component_mode)$csize; if (length(cs)) max(cs) else 0 },
-    APL            = function(g) mean_distance(g, directed = directed, weights = get_w(g), unconnected = TRUE),
-    Density        = function(g) edge_density(g, loops = FALSE),
-    Centralization = function(g) centr_degree(g, mode = "all", loops = FALSE, normalized = TRUE)$centralization,
-    Clustering     = function(g) transitivity(g, type = "global"),
-    Homophyly      = function(g) assortativity_degree(g, directed = directed)
+    diameter              = function(g) diameter(g, directed = directed, weights = get_w(g), unconnected = TRUE),
+    giant_component_size  = function(g) { cs <- components(g, mode = component_mode)$csize; if (length(cs)) max(cs) else 0 },
+    mean_distance         = function(g) mean_distance(g, directed = directed, weights = get_w(g), unconnected = TRUE),
+    edge_density          = function(g) edge_density(g, loops = FALSE),
+    degree_centralization = function(g) centr_degree(g, mode = "all", loops = FALSE, normalized = TRUE)$centralization,
+    clustering            = function(g) transitivity(g, type = "global"),
+    degree_assortativity  = function(g) assortativity_degree(g, directed = directed)
   )
 }
 
@@ -141,14 +141,14 @@ default_robustness_indicators <- function(directed = FALSE, component_mode = "we
 #'
 #' @param g Optional `igraph` object. If supplied, applicability is checked
 #'   ONCE, right here, against `g`: an inapplicable indicator (e.g.
-#'   `Reciprocity` on an undirected graph, or `Mean_topological_diversity`
+#'   `reciprocity` on an undirected graph, or `mean_topological_diversity`
 #'   on an unweighted graph) is dropped from the returned list entirely,
 #'   with a single warning, instead of being included as a function that
 #'   would re-check `is_directed()`/`is_weighted()` (and re-warn) on every
 #'   one of the [robustness()] removal steps. Since directedness/
 #'   weightedness don't change as nodes are removed, that per-step
 #'   re-checking is pure repetition -- with a 25-node network that's the
-#'   same warning 26 times. `Mean_topological_diversity` on a directed
+#'   same warning 26 times. `mean_topological_diversity` on a directed
 #'   graph is similar but different: it's still applicable (it collapses
 #'   the graph to undirected internally, per Eagle et al. 2010), but
 #'   supplying `g` here still matters -- it moves the "this will collapse
@@ -156,11 +156,11 @@ default_robustness_indicators <- function(directed = FALSE, component_mode = "we
 #'   step. If `g = NULL` (default), no pre-filtering happens and every
 #'   indicator keeps its own per-call guard, exactly as before.
 #' @param names Optional character vector restricting which indicators to
-#'   build, e.g. `c("Radius", "Reciprocity")`. Applied *before* the
+#'   build, e.g. `c("radius", "reciprocity")`. Applied *before* the
 #'   applicability checks above, so an indicator you didn't ask for never
 #'   gets built (and never triggers its warning) just because it happened
-#'   to be inapplicable to `g` -- e.g. requesting only `"Radius"` on a
-#'   directed graph won't emit `Mean_topological_diversity`'s "will
+#'   to be inapplicable to `g` -- e.g. requesting only `"radius"` on a
+#'   directed graph won't emit `mean_topological_diversity`'s "will
 #'   collapse" warning, since that indicator was never requested in the
 #'   first place. An unrecognised name errors. `NULL` (default) builds all
 #'   of them.
@@ -178,12 +178,12 @@ default_robustness_indicators <- function(directed = FALSE, component_mode = "we
 #'
 #' # Add just one -- via names=, not by subsetting the returned list, so
 #' # unrequested indicators never fire their applicability warnings
-#' robustness(g, ids, custom = optional_robustness_indicators(g, names = "Radius"))
+#' robustness(g, ids, custom = optional_robustness_indicators(g, names = "radius"))
 #' }
 #' @seealso [robustness()], [default_robustness_indicators()]
 #' @export
 optional_robustness_indicators <- function(g = NULL, names = NULL) {
-  # Builds the Mean_topological_diversity function. warn_collapse controls
+  # Builds the mean_topological_diversity function. warn_collapse controls
   # whether it warns about collapsing a directed graph on every single call
   # (TRUE -- the only option when g isn't supplied below, since directedness
   # can't be checked in advance) or silently collapses without repeating
@@ -194,12 +194,12 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
   make_diversity <- function(warn_collapse) {
     function(g) {
       if (!is_weighted(g)) {
-        warning("Mean_topological_diversity (igraph::diversity()) requires a weighted graph; returning NA for this unweighted graph.", call. = FALSE)
+        warning("mean_topological_diversity (igraph::diversity()) requires a weighted graph; returning NA for this unweighted graph.", call. = FALSE)
         return(NA_real_)
       }
       if (is_directed(g)) {
         if (warn_collapse) {
-          warning("Mean_topological_diversity: g is directed; collapsing to ",
+          warning("mean_topological_diversity: g is directed; collapsing to ",
                   "undirected (mode=\"collapse\", summing reciprocal edge weights) ",
                   "before computing diversity, following the topological ",
                   "treatment in Eagle et al. (2010) / Zetina-Rejon et al. (2022). ",
@@ -210,7 +210,7 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
       }
       # A graph fragmented enough to have lost all its edges has no weights
       # to compute an entropy from -- igraph::diversity() errors hard on
-      # this (unlike Diameter/APL's graceful unconnected=TRUE handling of
+      # this (unlike diameter/mean_distance's graceful unconnected=TRUE handling of
       # similarly degenerate cases). This is an expected, benign endpoint of
       # node removal, not a real problem, so it returns NA quietly here
       # instead of surfacing as a "such-and-such failed" warning via
@@ -221,11 +221,11 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
   }
 
   full <- list(
-    Radius = function(g) radius(g, mode = "all"),
+    radius = function(g) radius(g, mode = "all"),
 
-    Reciprocity = function(g) {
+    reciprocity = function(g) {
       if (!is_directed(g)) {
-        warning("Reciprocity only applies to directed graphs; returning NA for this undirected graph.", call. = FALSE)
+        warning("reciprocity only applies to directed graphs; returning NA for this undirected graph.", call. = FALSE)
         return(NA_real_)
       }
       reciprocity(g, ignore.loops = TRUE)
@@ -251,7 +251,7 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
     # (mode="collapse", summing reciprocal edge weights) so the formula
     # applies as originally defined -- warned about once (see warn_collapse
     # above / the g-supplied check below), not on every removal step.
-    Mean_topological_diversity = make_diversity(warn_collapse = TRUE)
+    mean_topological_diversity = make_diversity(warn_collapse = TRUE)
   )
 
   if (!is.null(names)) {
@@ -267,19 +267,19 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
   }
 
   if (!is.null(g)) {
-    if ("Reciprocity" %in% base::names(full) && !is_directed(g)) {
-      warning("Reciprocity only applies to directed graphs; dropping it from ",
+    if ("reciprocity" %in% base::names(full) && !is_directed(g)) {
+      warning("reciprocity only applies to directed graphs; dropping it from ",
               "custom indicators for this undirected graph (checked once).", call. = FALSE)
-      full$Reciprocity <- NULL
+      full$reciprocity <- NULL
     }
-    if ("Mean_topological_diversity" %in% base::names(full)) {
+    if ("mean_topological_diversity" %in% base::names(full)) {
       if (!is_weighted(g)) {
-        warning("Mean_topological_diversity (igraph::diversity()) requires a ",
+        warning("mean_topological_diversity (igraph::diversity()) requires a ",
                 "weighted graph; dropping it from custom indicators for this ",
                 "unweighted graph (checked once).", call. = FALSE)
-        full$Mean_topological_diversity <- NULL
+        full$mean_topological_diversity <- NULL
       } else if (is_directed(g)) {
-        warning("Mean_topological_diversity: g is directed; every removal step ",
+        warning("mean_topological_diversity: g is directed; every removal step ",
                 "will collapse it to undirected (mode=\"collapse\", summing ",
                 "reciprocal edge weights) before computing diversity, following ",
                 "the topological treatment in Eagle et al. (2010) / ",
@@ -287,7 +287,7 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
                 "predator vs. prey link direction) is discarded for this ",
                 "indicator. (Shown once here instead of on every removal step.)",
                 call. = FALSE)
-        full$Mean_topological_diversity <- make_diversity(warn_collapse = FALSE)
+        full$mean_topological_diversity <- make_diversity(warn_collapse = FALSE)
       }
     }
   }
@@ -299,7 +299,7 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
 # The setup logic behind robustness() and edge_robustness() that has nothing
 # to do with whether the thing being removed is a vertex or an edge: resolve
 # directed/mode, resolve which weights (if any) the distance-based indicators
-# use, bake them into g as an edge attribute, compute Connectivity's
+# use, bake them into g as an edge attribute, compute connectivity's
 # intact-graph baseline, and assemble the final indicators list from
 # keep=/exclude=/optional=/custom=. Returns list(g=, indicators=) -- g comes
 # back with the baked-in weight attribute (if any) already set; the caller
@@ -317,7 +317,7 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
   if (is.null(mode)) mode <- if (directed) "out" else "all"
 
   # Resolve which edge weights (if any) to use for the distance-based
-  # indicators (Diameter, APL, Connectivity). Unlike resolve_weights() (used
+  # indicators (diameter, mean_distance, connectivity). Unlike resolve_weights() (used
   # by the attack_by_*() functions), the default here is deliberately
   # unweighted/structural even on a weighted graph -- weighting is opt-in
   # via weights_as/weights, not automatic.
@@ -352,10 +352,10 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
   }
   get_weights <- function(gi) if (identical(weight_attr, NA)) NA else igraph::edge_attr(gi, weight_attr)
 
-  # Reference (intact-graph) reachable-pairs count, to normalise Connectivity.
-  # Uses the same mode/weights decision as Diameter/APL, so every
+  # Reference (intact-graph) reachable-pairs count, to normalise connectivity.
+  # Uses the same mode/weights decision as diameter/mean_distance, so every
   # distance-based indicator agrees on how to treat direction and weight.
-  # Computed here (before building `indicators`) so Connectivity can be
+  # Computed here (before building `indicators`) so connectivity can be
   # added as a regular entry in that list -- subject to keep=/exclude=/
   # custom= like every other indicator, instead of being hardcoded to
   # always compute regardless of what the user asked for.
@@ -371,18 +371,18 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
 
   if (is.null(indicators)) {
     indicators <- c(default_robustness_indicators(directed, component_mode, weight_attr),
-                     list(Connectivity = connectivity_indicator))
+                     list(connectivity = connectivity_indicator))
     if (!is.null(keep))    indicators <- indicators[intersect(names(indicators), keep)]
     if (!is.null(exclude)) indicators <- indicators[setdiff(names(indicators), exclude)]
     if (!is.null(optional)) {
       if (!isTRUE(optional) && !is.character(optional)) {
         stop("optional must be TRUE or a character vector of names, e.g. ",
-             "optional = c(\"Radius\", \"Reciprocity\").", call. = FALSE)
+             "optional = c(\"radius\", \"reciprocity\").", call. = FALSE)
       }
       # names = NULL (optional=TRUE) builds all of them; a character vector
       # restricts BOTH which get built AND which applicability warnings can
-      # fire, so requesting only e.g. "Radius" never triggers
-      # Mean_topological_diversity's "will collapse" warning just because
+      # fire, so requesting only e.g. "radius" never triggers
+      # mean_topological_diversity's "will collapse" warning just because
       # it happened to be inapplicable -- it was never requested.
       req_names <- if (isTRUE(optional)) NULL else optional
       indicators <- c(indicators, optional_robustness_indicators(g, names = req_names))
@@ -391,9 +391,9 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
   } else if (!is.list(indicators) || is.null(names(indicators)) ||
              any(names(indicators) == "") || !all(vapply(indicators, is.function, logical(1)))) {
     stop("indicators must be a named list of function(graph) -> scalar, e.g. ",
-         "list(GC = function(g) ...). To pick a subset of the default ",
+         "list(giant_component_size = function(g) ...). To pick a subset of the default ",
          "indicators instead, use keep=/exclude=, not indicators= -- e.g. ",
-         "robustness(g, ids, keep = c(\"GC\", \"APL\")).", call. = FALSE)
+         "robustness(g, ids, keep = c(\"giant_component_size\", \"mean_distance\")).", call. = FALSE)
   }
 
   list(g = g, indicators = indicators)
@@ -422,7 +422,7 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
 # every indicator after each step. delete_fn does the one-unit deletion
 # (delete_vertices for robustness(), delete_edges for edge_robustness());
 # everything specific to which unit is being removed (weight resolution,
-# name validation, Connectivity's baseline distance count) is the caller's
+# name validation, connectivity's baseline distance count) is the caller's
 # job and stays in robustness()/edge_robustness() respectively, since that's
 # where node-vs-edge specifics actually live -- this helper only knows how
 # to walk removal_names and build rows.
@@ -469,9 +469,9 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
 list_indicators <- function() {
   data.frame(
     name = c(
-      "Diameter", "GC", "APL", "Density", "Centralization", "Clustering",
-      "Homophyly", "Connectivity",
-      "Radius", "Reciprocity", "Mean_topological_diversity"
+      "diameter", "giant_component_size", "mean_distance", "edge_density", "degree_centralization", "clustering",
+      "degree_assortativity", "connectivity",
+      "radius", "reciprocity", "mean_topological_diversity"
     ),
     type = c(rep("default", 8L), rep("optional", 3L)),
     description = c(
@@ -506,50 +506,50 @@ list_indicators <- function() {
 #'   `attack_by_*()` function). `names(ids)` must be vertex names, in
 #'   removal order.
 #' @param indicators Named list of `function(graph) -> scalar`. Defaults to
-#'   [default_robustness_indicators()] (plus `Connectivity`). To add/remove
+#'   [default_robustness_indicators()] (plus `connectivity`). To add/remove
 #'   an index for a single call, prefer `exclude=`/`keep=`/`custom=` below;
 #'   pass `indicators=` directly only if you want to replace the whole
 #'   default set.
 #' @param exclude Character vector of default indicator names to drop
-#'   (e.g. `exclude = c("Homophyly", "Density")`). `"Connectivity"` is a
+#'   (e.g. `exclude = c("degree_assortativity", "edge_density")`). `"connectivity"` is a
 #'   valid name here too -- it's a regular entry in the default indicator
 #'   set, not a special always-on column. Ignored if you also pass your
 #'   own `indicators=`.
 #' @param keep Character vector of default indicator names to keep -- the
-#'   opposite of `exclude=` (e.g. `keep = c("GC", "APL")` to compute only
-#'   those two; note this also drops `"Connectivity"` unless you list it
+#'   opposite of `exclude=` (e.g. `keep = c("giant_component_size", "mean_distance")` to compute only
+#'   those two; note this also drops `"connectivity"` unless you list it
 #'   explicitly). Ignored if you also pass your own `indicators=`. If both
 #'   `keep=` and `exclude=` are given, `keep=` is applied first.
 #' @param custom Named list of extra `function(graph) -> scalar` indicators
-#'   to add on top of the defaults (e.g. Radius, Reciprocity, Diversity --
+#'   to add on top of the defaults (e.g. radius, reciprocity, Diversity --
 #'   see [optional_robustness_indicators()]). Ignored if you also pass your
 #'   own `indicators=`.
 #' @param optional Shortcut for adding entries from
 #'   [optional_robustness_indicators()] without calling it yourself and
 #'   repeating `g`. `TRUE` adds every optional indicator that applies to
-#'   `g`; a character vector (e.g. `c("Radius", "Reciprocity")`) adds just
+#'   `g`; a character vector (e.g. `c("radius", "reciprocity")`) adds just
 #'   those (an unknown name errors; a valid name that doesn't apply to `g`
 #'   is dropped with its own warning). Internally forwards to
 #'   [optional_robustness_indicators()]'s `names=` argument, so requesting
 #'   a subset never triggers the applicability warning of an indicator you
 #'   didn't ask for. Ignored if you also pass your own `indicators=`.
-#' @param directed Should Diameter / APL / Centralization / Homophyly treat
+#' @param directed Should diameter / mean_distance / degree_centralization / degree_assortativity treat
 #'   the network as directed? Applied consistently across all of them.
 #'   `NULL` (default) auto-detects from `g` via `is_directed()`. Passing
 #'   `directed = TRUE` explicitly on a graph that isn't actually directed
 #'   has no effect and triggers a warning.
-#' @param component_mode `"weak"`/`"strong"` for the `GC` indicator. Only
+#' @param component_mode `"weak"`/`"strong"` for the `giant_component_size` indicator. Only
 #'   relevant on directed graphs: `"weak"` ignores direction when defining
 #'   a connected component; `"strong"` requires mutual reachability.
-#' @param mode `"all"`/`"out"`/`"in"` for distance-based `Connectivity`.
+#' @param mode `"all"`/`"out"`/`"in"` for distance-based `connectivity`.
 #'   `NULL` (default) picks `"out"` when directed, `"all"` otherwise,
-#'   matching the directed/undirected treatment used for Diameter/APL so
+#'   matching the directed/undirected treatment used for diameter/mean_distance so
 #'   all distance-based indicators agree.
 #' @param weights Optional explicit numeric vector of edge weights (one per
 #'   edge, length `ecount(g)`). If supplied, always wins over
 #'   `weights_as`/`E(g)$weight` -- same override pattern as
 #'   [resolve_weights()], used by the `attack_by_*()` functions.
-#' @param weights_as How Diameter/APL/Connectivity interpret `E(g)$weight`
+#' @param weights_as How diameter/mean_distance/connectivity interpret `E(g)$weight`
 #'   when `weights = NULL`. `NULL` (default) ignores weights entirely and
 #'   works on unweighted topology (hop counts) -- the same purely
 #'   structural treatment used throughout Albert et al. (2000), and the
@@ -563,14 +563,14 @@ list_indicators <- function() {
 #'   convention as [attack_by_betweenness()]/[attack_by_closeness()].
 #'
 #' @return A `data.frame`, one row per removal step (`N` = 1 ..
-#'   `vcount(g)`), with one column per indicator plus `Connectivity`
+#'   `vcount(g)`), with one column per indicator plus `connectivity`
 #'   (normalised to the intact graph).
 #'
 #' @section Available indicators:
 #' Default (always computed unless dropped via `exclude=`/`keep=`):
-#' `Diameter`, `GC`, `APL`, `Density`, `Centralization`, `Clustering`,
-#' `Homophyly`, `Connectivity`. Optional (opt-in via `custom=`/`optional=`):
-#' `Radius`, `Reciprocity` (directed graphs only), `Mean_topological_diversity`
+#' `diameter`, `giant_component_size`, `mean_distance`, `edge_density`, `degree_centralization`, `clustering`,
+#' `degree_assortativity`, `connectivity`. Optional (opt-in via `custom=`/`optional=`):
+#' `radius`, `reciprocity` (directed graphs only), `mean_topological_diversity`
 #' (weighted graphs only). See [list_indicators()] for what each one
 #' measures.
 #'

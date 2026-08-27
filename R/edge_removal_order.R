@@ -13,7 +13,7 @@
 #     which would break by-name edge identification below. "collapse"
 #     (default) merges them via igraph::simplify(), summing weights if any
 #     -- same sum-on-collapse convention already used for the
-#     directed-to-undirected collapse in Mean_topological_diversity
+#     directed-to-undirected collapse in mean_topological_diversity
 #     (optional_robustness_indicators()). "error" stops instead, for callers
 #     who'd rather resolve it themselves than have it decided for them.
 #  2. Assign a synthetic, stable edge name ("tail|head") so edges can be

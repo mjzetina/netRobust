@@ -147,12 +147,12 @@ built-in indicators (see `?robustness` for the full default set, and how
 to add your own via `indicators =`):
 
 ```{r}
-failure <- robustness(g, ids = r, keep = c("GC", "APL", "Connectivity"))
-attack  <- robustness(g, ids = d, keep = c("GC", "APL", "Connectivity"))
+failure <- robustness(g, ids = r, keep = c("giant_component_size", "mean_distance", "connectivity"))
+attack  <- robustness(g, ids = d, keep = c("giant_component_size", "mean_distance", "connectivity"))
 head(attack)
 ```
 
-`GC` (giant component size) already tells a story: removing hub nodes
+`giant_component_size` already tells a story: removing hub nodes
 by degree shrinks it far faster than removing the same number of random
 nodes. But `failure` here is a single random draw -- one arbitrary
 sample out of the enormous space of possible removal orders. The next
@@ -169,7 +169,7 @@ quantile envelope, ready for plotting.
 
 ```{r}
 null_dist <- robustness_null_removal(g, n_reps = 200, seed = 123,
-                                      keep = c("GC", "APL", "Connectivity"))
+                                      keep = c("giant_component_size", "mean_distance", "connectivity"))
 null_env  <- summarise_null(null_dist)
 head(null_env)
 ```
@@ -214,9 +214,9 @@ second (the pointwise one).
 of Schneider et al. (2011) <doi:10.1073/pnas.1009440108>, generalised
 here to any indicator (see `?robustness_index` for the formula). It's
 deliberately neutral about whether a higher or lower value is
-"good": for `GC` specifically it's bounded in `[0, 1]` (1 = the curve
+"good": for `giant_component_size` specifically it's bounded in `[0, 1]` (1 = the curve
 never moved from its intact-network value), but that bound and its
-reading don't carry over to every indicator -- `Diameter`/`APL`, for
+reading don't carry over to every indicator -- `diameter`/`mean_distance`, for
 example, typically *increase* under attack before a network fragments,
 so their R-index can exceed 1 without anything having "improved".
 
@@ -227,14 +227,14 @@ whole curve, with none of the multiple-comparisons issue that testing
 every removal step separately would carry:
 
 ```{r}
-compare_robustness_index_to_null(attack, null_dist, index = "GC")
+compare_robustness_index_to_null(attack, null_dist, index = "giant_component_size")
 ```
 
 The same comparison, visually -- a histogram of the null's R-index
 values, with the attack's own R-index marked as a dashed line:
 
 ```{r, fig.height = 4}
-plot_r_index_null(null_dist, observed = attack, index = "GC")
+plot_r_index_null(null_dist, observed = attack, index = "giant_component_size")
 ```
 
 `compare_robustness()` applies `robustness_index()` across several
@@ -250,18 +250,18 @@ c <- attack_by_closeness(g)
 e <- attack_by_eigenvector(g)
 p <- attack_by_pagerank(g)
 
-attack_b <- robustness(g, ids = b, keep = c("GC", "APL", "Connectivity"))
-attack_c <- robustness(g, ids = c, keep = c("GC", "APL", "Connectivity"))
-attack_e <- robustness(g, ids = e, keep = c("GC", "APL", "Connectivity"))
-attack_p <- robustness(g, ids = p, keep = c("GC", "APL", "Connectivity"))
+attack_b <- robustness(g, ids = b, keep = c("giant_component_size", "mean_distance", "connectivity"))
+attack_c <- robustness(g, ids = c, keep = c("giant_component_size", "mean_distance", "connectivity"))
+attack_e <- robustness(g, ids = e, keep = c("giant_component_size", "mean_distance", "connectivity"))
+attack_p <- robustness(g, ids = p, keep = c("giant_component_size", "mean_distance", "connectivity"))
 
 r_index_attacks <- compare_robustness(scenario_list = list(
   Degree = attack, Betweenness = attack_b, Closeness = attack_c,
   Eigenvector = attack_e, PageRank = attack_p
-), index = "GC")
+), index = "giant_component_size")
 
 r_index_failures <- data.frame(Scenario = "Failures",
-                                R_index = robustness_index_null(null_dist, index = "GC"))
+                                R_index = robustness_index_null(null_dist, index = "giant_component_size"))
 
 rbind(r_index_failures, r_index_attacks)
 ```
@@ -300,8 +300,8 @@ edge-level counterpart of `robustness()`:
 er <- random_edge_failures(g)
 ea <- attack_by_edge_betweenness(g)
 
-efailure <- edge_robustness(g, ids = er, keep = c("GC", "Density"))
-eattack  <- edge_robustness(g, ids = ea, keep = c("GC", "Density"))
+efailure <- edge_robustness(g, ids = er, keep = c("giant_component_size", "edge_density"))
+eattack  <- edge_robustness(g, ids = ea, keep = c("giant_component_size", "edge_density"))
 head(eattack)
 ```
 
@@ -329,12 +329,12 @@ tie) rather than a *strength* (higher = stronger tie), pass `weights_as =
 "distance"` so "strongest tie first" is still what `decreasing = TRUE`
 means -- see `?attack_by_edge_weight`.
 
-**A structural fact worth knowing:** under edge removal, `Density` is
+**A structural fact worth knowing:** under edge removal, `edge_density` is
 *mathematically identical* across every scenario on the same graph, not
 just similar -- it depends only on how many edges have been removed, never
 on which ones (the vertex count never changes). See
-`?edge_robustness`'s "Density is order-invariant here" section before
-reading anything into a `Density` comparison here.
+`?edge_robustness`'s "edge_density is order-invariant here" section before
+reading anything into an `edge_density` comparison here.
 
 **Parallel edges** (multiple edges between the same pair of vertices)
 would break the internal by-edge identification these functions rely on;
@@ -352,7 +352,7 @@ against the *intact* network and then discarded, never against the
 result of a previous group's removal.
 
 ```{r}
-ko <- knockout_robustness(g, keep = c("GC"))
+ko <- knockout_robustness(g, keep = c("giant_component_size"))
 head(ko)
 ```
 
@@ -361,14 +361,14 @@ row per node. That's enough to answer "which single node's loss does the
 most damage?":
 
 ```{r}
-ko[which.min(ko$GC), ]
+ko[which.min(ko$giant_component_size), ]
 ```
 
 `groups=` accepts an explicit list instead, for specific combinations you
 care about -- each element either vertex names or vertex indices:
 
 ```{r}
-knockout_robustness(g, groups = list(c(1, 34), c(33, 34)), keep = c("GC"))
+knockout_robustness(g, groups = list(c(1, 34), c(33, 34)), keep = c("giant_component_size"))
 ```
 
 The `group` column is a list-column holding the exact (deduplicated) set
@@ -390,8 +390,8 @@ randomising the removal order:
 ```{r}
 struct_null <- robustness_null_structural(g, attack_fn = attack_by_degree,
                                            n_reps = 200, seed = 123,
-                                           keep = c("GC", "APL", "Connectivity"))
-robustness_index_null(struct_null, index = "GC")
+                                           keep = c("giant_component_size", "mean_distance", "connectivity"))
+robustness_index_null(struct_null, index = "giant_component_size")
 ```
 
 This is a **pure topological** null model: edge weights, if any, are
