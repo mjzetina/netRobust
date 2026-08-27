@@ -399,6 +399,22 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
   list(g = g, indicators = indicators)
 }
 
+# --- Compute one row of indicator values (internal, shared) ----------------
+# Applies every indicator function to gi, catching individual failures as NA
+# (with a warning naming which one failed) instead of aborting the whole
+# simulation over one bad indicator. Shared by .removal_curve() (one call
+# per step of a sequential removal) and knockout_robustness() (one call per
+# independent group trial) -- both just need "indicator values for this one
+# graph state", the surrounding loop differs.
+.compute_indicator_row <- function(gi, indicators) {
+  Map(function(nm, f) {
+    tryCatch(f(gi), error = function(e) {
+      warning(nm, " failed and returned NA: ", conditionMessage(e), call. = FALSE)
+      NA_real_
+    })
+  }, names(indicators), indicators)
+}
+
 # --- Shared removal-and-compute loop (internal) -----------------------------
 # The core simulation loop behind robustness() and edge_robustness(): starting
 # from g intact, delete one unit (vertex or edge) at a time -- by NAME,
@@ -411,23 +427,14 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
 # where node-vs-edge specifics actually live -- this helper only knows how
 # to walk removal_names and build rows.
 .removal_curve <- function(g, removal_names, indicators, delete_fn) {
-  compute_row <- function(gi) {
-    Map(function(nm, f) {
-      tryCatch(f(gi), error = function(e) {
-        warning(nm, " failed and returned NA: ", conditionMessage(e), call. = FALSE)
-        NA_real_
-      })
-    }, names(indicators), indicators)
-  }
-
   n <- length(removal_names)
   rows <- vector("list", n + 1)
-  rows[[1]] <- c(list(N = 1), compute_row(g))
+  rows[[1]] <- c(list(N = 1), .compute_indicator_row(g, indicators))
 
   gi <- g
   for (i in seq_len(n)) {
     gi <- delete_fn(gi, removal_names[i])
-    rows[[i + 1]] <- c(list(N = i + 1), compute_row(gi))
+    rows[[i + 1]] <- c(list(N = i + 1), .compute_indicator_row(gi, indicators))
   }
 
   df <- do.call(rbind.data.frame, rows)
