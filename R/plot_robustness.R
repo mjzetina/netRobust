@@ -38,7 +38,7 @@
 #' @details
 #' If any indicator has `NA` values at some removal steps (common once the
 #' network fragments enough that an indicator becomes mathematically
-#' undefined -- e.g. Diameter on an isolated node), this warns once with
+#' undefined -- e.g. diameter on an isolated node), this warns once with
 #' the specific scenario/indicator/step count affected, before ggplot2's
 #' own generic "Removed N rows..." warnings fire at print time.
 #'
@@ -60,8 +60,8 @@ plot_robustness <- function(failure, attack, null_envelope = NULL,
   # Warn once, clearly, about points that won't be plotted -- instead of
   # relying on ggplot2's own generic "Removed N rows..." messages (one per
   # layer, computed at print time, with no explanation of why). NAs here
-  # are usually expected, not a bug: several indicators (Diameter, APL,
-  # Homophyly, Radius, Reciprocity...) become mathematically undefined once
+  # are usually expected, not a bug: several indicators (diameter, mean_distance,
+  # degree_assortativity, radius, reciprocity...) become mathematically undefined once
   # the network fragments enough during removal -- e.g. a single isolated
   # node has no diameter -- so those specific points simply have nothing
   # to draw.
@@ -72,7 +72,7 @@ plot_robustness <- function(failure, attack, null_envelope = NULL,
                       collapse = ", ")
     warning(nrow(na_curve), " point(s) are NA and won't be drawn: ", detail,
             ". This is expected once the network fragments enough during removal ",
-            "for an indicator to become undefined (e.g. Diameter on an isolated node) ",
+            "for an indicator to become undefined (e.g. diameter on an isolated node) ",
             "-- not necessarily a problem.", call. = FALSE)
   }
   if (!is.null(null_envelope)) {

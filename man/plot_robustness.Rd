@@ -50,7 +50,7 @@ per indicator, optionally with a shaded Monte Carlo null envelope
 \details{
 If any indicator has \code{NA} values at some removal steps (common once the
 network fragments enough that an indicator becomes mathematically
-undefined -- e.g. Diameter on an isolated node), this warns once with
+undefined -- e.g. diameter on an isolated node), this warns once with
 the specific scenario/indicator/step count affected, before ggplot2's
 own generic "Removed N rows..." warnings fire at print time.
 }
