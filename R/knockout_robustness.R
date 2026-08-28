@@ -63,7 +63,10 @@
 #' discarded, never against the result of a previous group's removal.
 #' "What happens if this species/actor disappears, on its own?" generalised
 #' to "...if this *set* of species/actors disappears together, on its
-#' own?".
+#' own?". Shows a console progress indicator across groups in an
+#' interactive session (see [robustness_null_removal()]'s progress notes)
+#' -- useful when `groups` is large, e.g. from
+#' [knockout_robustness_null_removal()].
 #'
 #' @param g An `igraph` object to analyze.
 #' @param groups What to knock out, one group per trial. `NULL` (default)
@@ -109,6 +112,7 @@ knockout_robustness <- function(g, groups = NULL, indicators = NULL, exclude = N
     gi <- delete_vertices(g, groups[[i]])
     rows[[i]] <- c(list(group_id = i, n_removed = length(groups[[i]])),
                     .compute_indicator_row(gi, setup$indicators))
+    .console_progress(i, length(groups))
   }
 
   df <- do.call(rbind.data.frame, rows)

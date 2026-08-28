@@ -263,6 +263,127 @@ edge_robustness_null_removal <- function(g, n_reps = 500, on_parallel = c("colla
   do.call(rbind, reps)
 }
 
+# --- 1d. Build the null distribution (random-group knockout) ---------------
+#' Monte Carlo null distribution of knock-out results (random groups)
+#'
+#' The [knockout_robustness()] counterpart of [robustness_null_removal()]:
+#' generates `n_reps` *random* groups of each size in `sizes` and knocks
+#' each one out independently (via [knockout_robustness()]), producing an
+#' empirical null distribution stratified by group size. Answers "is
+#' removing *this particular* group unusual, compared to removing a random
+#' group of the same size?" -- see [compare_knockout_to_null()] and
+#' [plot_knockout_null()] to actually make that comparison.
+#'
+#' Stratified by size because [knockout_robustness()] output isn't a
+#' trajectory the way [robustness()]'s is -- an indicator's value for a
+#' 1-vertex knock-out and a 5-vertex knock-out aren't comparable the way
+#' two points on the same curve are, so a single pooled null wouldn't mean
+#' anything. [compare_knockout_to_null()] always compares an observed
+#' group against *only* the null replicates of matching size.
+#'
+#' @param g An `igraph` object.
+#' @param sizes Integer vector of group sizes to build a null for -- must
+#'   cover every group size you intend to test with
+#'   [compare_knockout_to_null()]/[plot_knockout_null()] afterwards.
+#' @param n_reps Number of random groups to generate *per size* (so the
+#'   total number of trials is `n_reps * length(sizes)`).
+#' @param seed Optional integer passed to `set.seed()` for reproducibility.
+#' @param ... Forwarded to the internal [knockout_robustness()] call --
+#'   must match whatever settings were used for the observed knock-out(s)
+#'   you're testing against.
+#'
+#' @return A `data.frame`, same shape as [knockout_robustness()]'s output
+#'   (`group_id`, `group`, `n_removed`, one column per indicator) -- one
+#'   row per random trial, `n_removed` identifying which size stratum it
+#'   belongs to.
+#'
+#' @seealso [knockout_robustness()], [compare_knockout_to_null()],
+#'   [plot_knockout_null()], [robustness_null_removal()]
+#' @export
+knockout_robustness_null_removal <- function(g, sizes, n_reps = 500, seed = NULL, ...) {
+  if (!is.null(seed)) set.seed(seed)
+  if (is.null(V(g)$name)) V(g)$name <- paste0("node_", seq_len(vcount(g)))
+  n <- vcount(g)
+  if (any(sizes < 1 | sizes > n | sizes != round(sizes))) {
+    stop("sizes must be positive integers no larger than vcount(g) = ", n,
+         ".", call. = FALSE)
+  }
+
+  random_groups <- unlist(
+    lapply(sizes, function(sz) replicate(n_reps, sample(n, sz), simplify = FALSE)),
+    recursive = FALSE
+  )
+
+  knockout_robustness(g, groups = random_groups, ...)
+}
+
+# --- 1e. Compare an observed knock-out against the null (size-matched) -----
+#' Compare an observed knock-out against a null distribution
+#'
+#' Empirical p-value testing whether an observed group's knock-out effect
+#' (from [knockout_robustness()]) is unusual compared to a null
+#' distribution of *random* groups of the *same size*
+#' ([knockout_robustness_null_removal()]) -- the [knockout_robustness()]
+#' counterpart of [compare_to_null()], matched by group size instead of
+#' by removal step.
+#'
+#' The p-value uses the same two-sided, mean-centred empirical test as
+#' [compare_to_null()]: the fraction of same-size null replicates at
+#' least as far from their own mean as the observed group's value is.
+#'
+#' @param observed Output of [knockout_robustness()] -- one or more
+#'   groups to test.
+#' @param null_df Output of [knockout_robustness_null_removal()]. Must
+#'   include every group size present in `observed` -- an observed group
+#'   whose size has no matching null replicates errors, since the p-value
+#'   would be undefined, not just imprecise.
+#' @param index Name of the indicator column to compare (default
+#'   `"giant_component_size"`).
+#'
+#' @return A `data.frame`, one row per observed group, with columns
+#'   `group_id`, `group`, `n_removed`, `observed`, `null_mean`
+#'   (same-size null replicates only), and `p_value`.
+#'
+#' @seealso [knockout_robustness()], [knockout_robustness_null_removal()],
+#'   [plot_knockout_null()], [compare_to_null()]
+#' @export
+compare_knockout_to_null <- function(observed, null_df, index = "giant_component_size") {
+  if (!index %in% names(observed) || !index %in% names(null_df)) {
+    stop("index = \"", index, "\" must be a column in both observed and ",
+         "null_df.", call. = FALSE)
+  }
+  missing_sizes <- setdiff(unique(observed$n_removed), unique(null_df$n_removed))
+  if (length(missing_sizes) > 0) {
+    stop("observed has group size(s) with no matching null replicates in ",
+         "null_df: ", paste(missing_sizes, collapse = ", "), ". Build ",
+         "knockout_robustness_null_removal(g, sizes = ...) including ",
+         "these size(s) first.", call. = FALSE)
+  }
+
+  p <- vapply(seq_len(nrow(observed)), function(i) {
+    sz <- observed$n_removed[i]
+    obs_val <- observed[[index]][i]
+    null_vals <- null_df[[index]][null_df$n_removed == sz]
+    if (length(null_vals) == 0 || is.na(obs_val)) return(NA_real_)
+    center <- mean(null_vals, na.rm = TRUE)
+    mean(abs(null_vals - center) >= abs(obs_val - center), na.rm = TRUE)
+  }, numeric(1))
+
+  null_mean <- vapply(observed$n_removed, function(sz) {
+    mean(null_df[[index]][null_df$n_removed == sz], na.rm = TRUE)
+  }, numeric(1))
+
+  out <- data.frame(
+    group_id  = observed$group_id,
+    n_removed = observed$n_removed,
+    observed  = observed[[index]],
+    null_mean = unname(null_mean),
+    p_value   = p
+  )
+  out$group <- observed$group
+  out[, c("group_id", "group", "n_removed", "observed", "null_mean", "p_value")]
+}
+
 # --- 2. Summarise the null into a quantile envelope per N ------------------
 #' Summarise a null distribution into a quantile envelope
 #'

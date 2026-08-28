@@ -55,7 +55,10 @@ every group here is tested against the \emph{intact} network and then
 discarded, never against the result of a previous group's removal.
 "What happens if this species/actor disappears, on its own?" generalised
 to "...if this \emph{set} of species/actors disappears together, on its
-own?".
+own?". Shows a console progress indicator across groups in an
+interactive session (see \code{\link[=robustness_null_removal]{robustness_null_removal()}}'s progress notes)
+-- useful when \code{groups} is large, e.g. from
+\code{\link[=knockout_robustness_null_removal]{knockout_robustness_null_removal()}}.
 }
 \seealso{
 \code{\link[=robustness]{robustness()}}, \code{\link[=edge_robustness]{edge_robustness()}}, \code{\link[=list_indicators]{list_indicators()}}

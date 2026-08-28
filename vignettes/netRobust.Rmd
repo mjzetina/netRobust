@@ -395,6 +395,48 @@ of vertices removed in that trial; `n_removed` is its size. Unlike
 here at all -- each row is an independent trial, not a point on a
 trajectory.
 
+### Is a particular group's effect unusual?
+
+`compare_to_null()`/`robustness_index()` assume a *trajectory* (an `N`
+column) -- they don't apply here directly. The natural question for a
+knock-out is different anyway: not "does this differ from random failure
+overall?" but *"is removing this particular node -- or this particular
+group -- more damaging than removing a random one of the same size?"*
+That's a null stratified by group size, since a 1-vertex and a 5-vertex
+knock-out aren't on the same scale to begin with:
+
+```{r}
+knull <- knockout_robustness_null_removal(g, sizes = c(1, 2), n_reps = 200, seed = 123,
+                                           keep = c("giant_component_size"))
+```
+
+Compare the single most damaging node found above, and a specific pair,
+against same-size random groups:
+
+```{r}
+worst <- ko[which.min(ko$giant_component_size), ]
+pair  <- knockout_robustness(g, groups = list(c(1, 34)), keep = c("giant_component_size"))
+
+observed <- rbind(worst, pair)
+observed$group_id <- seq_len(nrow(observed))
+
+compare_knockout_to_null(observed, knull, index = "giant_component_size")
+```
+
+Both come out significant: this hub node is unusually damaging alone,
+and stays unusually damaging paired with another vertex. Visually, one
+panel per group size, each observed group as its own coloured line:
+
+```{r, fig.height = 4}
+plot_knockout_null(knull, observed = observed, index = "giant_component_size")
+```
+
+An observed group whose size wasn't included in `sizes=` when building
+the null errors in `compare_knockout_to_null()` (the p-value would be
+undefined) but only warns in `plot_knockout_null()` (it's a visual aid,
+not a significance test -- the line still draws, just without a
+histogram behind it).
+
 ## Structural null model
 
 `robustness_null_removal()` asks: *given this exact network, does this
@@ -422,6 +464,7 @@ over onto a randomised topology. Pass a weight-agnostic `attack_fn` (like
 Every function used here has a `?` help page with the full set of
 arguments and further detail -- start with `?robustness`,
 `?edge_robustness`, `?knockout_robustness`, `?robustness_null_removal`,
-`?edge_robustness_null_removal`, `?robustness_null_structural`, and
-`?compare_robustness_index_to_null` -- or browse everything at once with
+`?edge_robustness_null_removal`, `?knockout_robustness_null_removal`,
+`?robustness_null_structural`, and `?compare_robustness_index_to_null` --
+or browse everything at once with
 `help(package = "netRobust")`.

@@ -63,3 +63,48 @@ test_that("robustness()/edge_robustness() are unaffected by the .compute_indicat
   r2 <- edge_robustness(g, ids = ord, keep = c("giant_component_size"))
   expect_equal(r2$giant_component_size[1], vcount(g))
 })
+
+test_that("knockout_robustness_null_removal() builds a size-stratified null", {
+  null_dist <- knockout_robustness_null_removal(g, sizes = c(1, 2), n_reps = 10, seed = 1,
+                                                 keep = c("giant_component_size"))
+  expect_equal(nrow(null_dist), 20)
+  expect_equal(as.integer(table(null_dist$n_removed)), c(10, 10))
+  expect_true(is.list(null_dist$group))
+})
+
+test_that("knockout_robustness_null_removal() rejects invalid sizes", {
+  expect_error(knockout_robustness_null_removal(g, sizes = c(0), n_reps = 5), "positive integers")
+  expect_error(knockout_robustness_null_removal(g, sizes = c(100), n_reps = 5), "positive integers")
+})
+
+test_that("compare_knockout_to_null() matches observed groups to same-size null replicates", {
+  null_dist <- knockout_robustness_null_removal(g, sizes = c(1, 2), n_reps = 20, seed = 1,
+                                                 keep = c("giant_component_size"))
+  observed <- knockout_robustness(g, groups = list(c(1), c(33, 34)), keep = c("giant_component_size"))
+  cmp <- compare_knockout_to_null(observed, null_dist, index = "giant_component_size")
+  expect_equal(nrow(cmp), 2)
+  expect_true(all(c("group_id", "group", "n_removed", "observed", "null_mean", "p_value") %in% names(cmp)))
+})
+
+test_that("compare_knockout_to_null() errors on an observed size with no matching null", {
+  null_dist <- knockout_robustness_null_removal(g, sizes = c(1), n_reps = 10, seed = 1,
+                                                 keep = c("giant_component_size"))
+  observed <- knockout_robustness(g, groups = list(c(1, 2, 3)), keep = c("giant_component_size"))
+  expect_error(compare_knockout_to_null(observed, null_dist), "no matching null replicates")
+})
+
+test_that("plot_knockout_null() facets by size and accepts observed groups", {
+  null_dist <- knockout_robustness_null_removal(g, sizes = c(1, 2), n_reps = 10, seed = 1,
+                                                 keep = c("giant_component_size"))
+  observed <- knockout_robustness(g, groups = list(c(1), c(33, 34)), keep = c("giant_component_size"))
+  fig <- plot_knockout_null(null_dist, observed = observed, index = "giant_component_size")
+  expect_s3_class(fig, "ggplot")
+})
+
+test_that("plot_knockout_null() warns (not errors) on an unmatched observed size", {
+  null_dist <- knockout_robustness_null_removal(g, sizes = c(1), n_reps = 10, seed = 1,
+                                                 keep = c("giant_component_size"))
+  observed <- knockout_robustness(g, groups = list(c(1, 2, 3)), keep = c("giant_component_size"))
+  expect_warning(fig <- plot_knockout_null(null_dist, observed = observed), "no matching null replicates")
+  expect_s3_class(fig, "ggplot")
+})
