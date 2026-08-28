@@ -195,6 +195,74 @@ robustness_null_structural <- function(g, attack_fn, n_reps = 500, rewire_niter 
   do.call(rbind, reps)
 }
 
+# --- 1c. Build the null distribution (edge removal-order randomisation) ----
+#' Monte Carlo null distribution of edge-robustness curves (random removal order)
+#'
+#' The edge-level counterpart of [robustness_null_removal()]: runs `n_reps`
+#' independent random-edge-failure simulations of the same network (via
+#' [random_edge_failures()] + [edge_robustness()]), producing the empirical
+#' null distribution of every robustness indicator at every edge-removal
+#' step. Statistical baseline for an edge-based attack curve (from
+#' [attack_by_edge_betweenness()]/[attack_by_edge_weight()]), the same way
+#' [robustness_null_removal()] is for a node-based one.
+#'
+#' `g`'s parallel edges (if any) are resolved *once*, up front -- not once
+#' per replicate. Unlike composing [random_edge_failures()] and
+#' [edge_robustness()] by hand yourself (where each call independently
+#' checks and, if applicable, re-warns about the same parallel edges),
+#' this warns at most once for the whole run, since `g`'s parallel-edge
+#' status doesn't change across replicates.
+#'
+#' @param g An `igraph` object.
+#' @param n_reps Number of random-edge-failure replicates.
+#' @param on_parallel How to handle parallel edges (multiple edges between
+#'   the same pair of vertices), resolved once before any replicates run.
+#'   `"collapse"` (default) merges them via `igraph::simplify()`, summing
+#'   weights if any, with a warning. `"error"` stops instead.
+#' @param parallel,seed,... As in [robustness_null_removal()] -- `...` is
+#'   forwarded to every internal [edge_robustness()] call, and must match
+#'   whatever settings were used for the observed edge-attack curve you're
+#'   testing against.
+#'
+#' @return A `data.frame` stacking all replicates: same columns as
+#'   [edge_robustness()]'s output, plus `rep` identifying which replicate
+#'   each row came from. Pass this to [summarise_null()], [compare_to_null()],
+#'   or [robustness_index_null()] exactly like a node-removal null.
+#'
+#' @seealso [edge_robustness()], [random_edge_failures()],
+#'   [robustness_null_removal()], [summarise_null()], [compare_to_null()]
+#' @export
+edge_robustness_null_removal <- function(g, n_reps = 500, on_parallel = c("collapse", "error"),
+                                          parallel = TRUE, seed = NULL, ...) {
+  on_parallel <- match.arg(on_parallel)
+  # Resolve parallel edges ONCE, up front -- g's parallel-edge status doesn't
+  # change across replicates, so collapsing (and warning, if applicable)
+  # here means every per-replicate call below sees an already-clean graph
+  # and its own internal .prepare_edge_graph() check becomes a no-op,
+  # instead of re-warning about the same thing on every one of n_reps
+  # replicates (random_edge_failures() AND edge_robustness() would each
+  # otherwise re-check it separately, doubling that noise again).
+  g <- .prepare_edge_graph(g, on_parallel = on_parallel)
+  if (!is.null(seed)) set.seed(seed)
+  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
+
+  run_one <- function(i) {
+    ids <- random_edge_failures(g)
+    res <- edge_robustness(g, ids, ...)
+    res$rep <- i
+    if (!use_parallel) .console_progress(i, n_reps)
+    res
+  }
+
+  reps <- if (use_parallel) {
+    future.apply::future_lapply(seq_len(n_reps), run_one, future.seed = TRUE)
+  } else {
+    lapply(seq_len(n_reps), run_one)
+  }
+
+  do.call(rbind, reps)
+}
+
 # --- 2. Summarise the null into a quantile envelope per N ------------------
 #' Summarise a null distribution into a quantile envelope
 #'

@@ -17,7 +17,8 @@
 #'   [edge_removal_order()] -- ready to pass to [edge_robustness()].
 #'
 #' @seealso [edge_removal_order()], [edge_robustness()],
-#'   [attack_by_edge_betweenness()], [attack_by_edge_weight()]
+#'   [attack_by_edge_betweenness()], [attack_by_edge_weight()],
+#'   [edge_robustness_null_removal()]
 #' @export
 random_edge_failures <- function(g, on_parallel = c("collapse", "error")) {
   g <- .prepare_edge_graph(g, on_parallel = on_parallel)

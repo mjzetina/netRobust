@@ -307,11 +307,29 @@ head(eattack)
 
 `edge_robustness()` produces the exact same shape as `robustness()` (`N` +
 one column per indicator), so it plugs directly into every function
-already introduced -- `plot_robustness()`, `compare_to_null()`,
-`robustness_index()`, `compare_robustness_index_to_null()`, `null_dist`
-from `robustness_null_removal()` -- with **no changes needed**, as long as
-the null was built with `random_edge_failures()` replicates rather than
-node-removal ones for a valid comparison.
+already introduced -- with **no changes needed** -- as long as the null
+distribution it's compared against was itself built from
+`random_edge_failures()` replicates, not node-removal ones.
+`edge_robustness_null_removal()` is the edge-level counterpart of
+`robustness_null_removal()` for exactly that:
+
+```{r}
+edge_null <- edge_robustness_null_removal(g, n_reps = 200, seed = 123,
+                                           keep = c("giant_component_size", "connectivity"))
+compare_robustness_index_to_null(eattack, edge_null, index = "giant_component_size")
+```
+
+```{r, fig.height = 4}
+plot_r_index_null(edge_null, observed = eattack, index = "giant_component_size")
+```
+
+The betweenness edge attack's `giant_component_size` R-index sits well
+outside the null distribution here -- the same reading as the node-level
+version earlier, just for losing relationships instead of actors.
+`compare_to_null()` (the pointwise test) and `plot_robustness()` (with a
+median curve from `summarise_null()`) work the same way too -- see the
+node-removal sections above for how to build those from a null
+distribution shaped like `edge_null`.
 
 `attack_by_edge_weight()` ranks edges directly by weight -- the network
 needs to actually be weighted for that one to mean anything:
@@ -404,5 +422,6 @@ over onto a randomised topology. Pass a weight-agnostic `attack_fn` (like
 Every function used here has a `?` help page with the full set of
 arguments and further detail -- start with `?robustness`,
 `?edge_robustness`, `?knockout_robustness`, `?robustness_null_removal`,
-`?robustness_null_structural`, and `?compare_robustness_index_to_null` --
-or browse everything at once with `help(package = "netRobust")`.
+`?edge_robustness_null_removal`, `?robustness_null_structural`, and
+`?compare_robustness_index_to_null` -- or browse everything at once with
+`help(package = "netRobust")`.

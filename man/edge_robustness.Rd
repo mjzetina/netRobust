@@ -91,5 +91,5 @@ show a difference, by construction, regardless of your data. Consider
 \seealso{
 \code{\link[=robustness]{robustness()}}, \code{\link[=random_edge_failures]{random_edge_failures()}},
 \code{\link[=attack_by_edge_betweenness]{attack_by_edge_betweenness()}}, \code{\link[=attack_by_edge_weight]{attack_by_edge_weight()}},
-\code{\link[=list_indicators]{list_indicators()}}
+\code{\link[=edge_robustness_null_removal]{edge_robustness_null_removal()}}, \code{\link[=list_indicators]{list_indicators()}}
 }

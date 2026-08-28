@@ -92,3 +92,32 @@ test_that("robustness() is unaffected by the shared-loop refactor (regression ch
   expect_equal(res$giant_component_size[1], vcount(g))
   expect_true(all(diff(res$giant_component_size) <= 0))  # giant_component_size is non-increasing under node removal
 })
+
+test_that("edge_robustness_null_removal() builds a valid null distribution", {
+  null_dist <- edge_robustness_null_removal(g, n_reps = 5, seed = 1, keep = c("giant_component_size"))
+  expect_equal(nrow(null_dist), 5 * ecount(g))
+  expect_true(all(c("N", "giant_component_size", "rep") %in% names(null_dist)))
+  expect_equal(length(unique(null_dist$rep)), 5)
+})
+
+test_that("edge_robustness_null_removal() output plugs into compare_to_null()/robustness_index()", {
+  ea <- attack_by_edge_betweenness(g)
+  eattack <- edge_robustness(g, ids = ea, keep = c("giant_component_size"))
+  null_dist <- edge_robustness_null_removal(g, n_reps = 5, seed = 1, keep = c("giant_component_size"))
+
+  sig <- compare_to_null(eattack, null_dist)
+  expect_true(all(c("N", "Index", "observed", "p_value") %in% names(sig)))
+
+  cmp <- compare_robustness_index_to_null(eattack, null_dist, index = "giant_component_size")
+  expect_true(all(c("observed", "null_mean", "null_median", "p_value") %in% names(cmp)))
+})
+
+test_that("edge_robustness_null_removal() applies on_parallel consistently to both calls", {
+  el <- rbind(c("A", "B"), c("A", "B"), c("B", "C"))
+  gp <- graph_from_edgelist(el, directed = TRUE)
+  expect_warning(
+    null_dist <- edge_robustness_null_removal(gp, n_reps = 2, seed = 1),
+    "redundant edge"
+  )
+  expect_equal(nrow(null_dist), 2 * 2)  # 3 raw edges collapse to 2, times 2 replicates
+})

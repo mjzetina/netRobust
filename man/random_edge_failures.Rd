@@ -27,5 +27,6 @@ the endpoint actors/nodes themselves disappearing.
 }
 \seealso{
 \code{\link[=edge_removal_order]{edge_removal_order()}}, \code{\link[=edge_robustness]{edge_robustness()}},
-\code{\link[=attack_by_edge_betweenness]{attack_by_edge_betweenness()}}, \code{\link[=attack_by_edge_weight]{attack_by_edge_weight()}}
+\code{\link[=attack_by_edge_betweenness]{attack_by_edge_betweenness()}}, \code{\link[=attack_by_edge_weight]{attack_by_edge_weight()}},
+\code{\link[=edge_robustness_null_removal]{edge_robustness_null_removal()}}
 }

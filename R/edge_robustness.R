@@ -64,7 +64,7 @@
 #'
 #' @seealso [robustness()], [random_edge_failures()],
 #'   [attack_by_edge_betweenness()], [attack_by_edge_weight()],
-#'   [list_indicators()]
+#'   [edge_robustness_null_removal()], [list_indicators()]
 #' @export
 edge_robustness <- function(g, ids, indicators = NULL, exclude = NULL, keep = NULL,
                              custom = NULL, optional = NULL,
