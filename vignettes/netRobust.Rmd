@@ -437,6 +437,67 @@ undefined) but only warns in `plot_knockout_null()` (it's a visual aid,
 not a significance test -- the line still draws, just without a
 histogram behind it).
 
+## Node importance via Shapley values
+
+Knock-out asks about *one* node, or one specific group, in isolation.
+A different question: *averaged over every possible removal order, how
+much does each node matter?* That's a Shapley value (Shapley 1953) --
+a node's fair share of the total change in an indicator, credited for
+its impact across every context it could be removed in (early, late,
+alongside any combination of other removed nodes), not just the one
+order a single attack curve happens to trace out.
+
+It's computed efficiently: a single random removal order already gives
+every node's marginal contribution for free (the change in an indicator
+between consecutive steps), so `n_reps` random orders -- the same
+simulation `random_failures()` + `robustness()` already run -- estimate
+every node's Shapley value simultaneously, in one pass per replicate:
+
+```{r}
+shap <- shapley_robustness(g, n_reps = 200, n_perm = 200, seed = 123,
+                            keep = c("giant_component_size", "mean_distance"))
+head(shap$nodes)
+```
+
+`shap$nodes` is one row per vertex, with a value and a standard-error
+column per indicator. The values satisfy Shapley's *efficiency* axiom:
+they sum exactly to the indicator's intact-network value minus its
+value once every node is gone (`vcount(g)` minus `0`, for
+`giant_component_size`):
+
+```{r}
+sum(shap$nodes$giant_component_size)
+```
+
+### Is there real signal, or just noise?
+
+Comparing every node against every other one directly would take
+`choose(vcount(g), 2)` pairwise tests -- impractical for anything but a
+tiny network, and it reintroduces the same multiple-comparisons problem
+that `compare_robustness_index_to_null()` avoids by testing a whole curve
+at once instead of step by step. `shapley_robustness()` sidesteps this
+with a single **global** test per indicator instead: are nodes more
+differentiated from each other than sampling noise alone would produce?
+
+```{r}
+shap$global_test
+```
+
+That answers *whether* nodes differ at all -- not *which* nodes differ
+from which. For that, the per-node standard errors already in
+`shap$nodes` support an informal visual comparison instead, via
+`plot_shapley()` (a forest plot, one panel per indicator, node order
+fixed across panels so a node's position can be tracked between them):
+
+```{r, fig.height = 6}
+plot_shapley(shap)
+```
+
+Node 1 -- the highest-degree hub -- stands out clearly on both
+indicators, with a confidence interval well clear of every other node's;
+most of the rest are indistinguishable from each other given this many
+replicates.
+
 ## Structural null model
 
 `robustness_null_removal()` asks: *given this exact network, does this
@@ -465,6 +526,7 @@ Every function used here has a `?` help page with the full set of
 arguments and further detail -- start with `?robustness`,
 `?edge_robustness`, `?knockout_robustness`, `?robustness_null_removal`,
 `?edge_robustness_null_removal`, `?knockout_robustness_null_removal`,
-`?robustness_null_structural`, and `?compare_robustness_index_to_null` --
+`?robustness_null_structural`, `?compare_robustness_index_to_null`, and
+`?shapley_robustness` --
 or browse everything at once with
 `help(package = "netRobust")`.
