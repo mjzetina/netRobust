@@ -44,9 +44,11 @@ facet strip also shows that indicator's global-test p-value.
 }
 \section{The dashed zero line}{
 
-Marks zero marginal contribution -- a node whose confidence interval
-crosses it isn't distinguishable from "no effect" at that indicator.
-Whether \emph{negative} values are possible depends on the indicator.
+Marks zero mean contribution -- a node whose confidence interval crosses
+it isn't distinguishable from "no effect" at that indicator. Shapley
+values are positive when the node's removal reduced the indicator, and
+negative when its removal increased it. Whether \emph{negative} values are
+possible at all depends on the indicator.
 \code{giant_component_size}/\code{connectivity} can only shrink or stay the same
 as vertices are removed, so their contributions are always \verb{>= 0}.
 \code{mean_distance}/\code{diameter}, by contrast, often \emph{increase} before a

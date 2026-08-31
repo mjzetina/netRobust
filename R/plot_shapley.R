@@ -20,9 +20,11 @@
 #' facet strip also shows that indicator's global-test p-value.
 #'
 #' @section The dashed zero line:
-#' Marks zero marginal contribution -- a node whose confidence interval
-#' crosses it isn't distinguishable from "no effect" at that indicator.
-#' Whether *negative* values are possible depends on the indicator.
+#' Marks zero mean contribution -- a node whose confidence interval crosses
+#' it isn't distinguishable from "no effect" at that indicator. Shapley
+#' values are positive when the node's removal reduced the indicator, and
+#' negative when its removal increased it. Whether *negative* values are
+#' possible at all depends on the indicator.
 #' `giant_component_size`/`connectivity` can only shrink or stay the same
 #' as vertices are removed, so their contributions are always `>= 0`.
 #' `mean_distance`/`diameter`, by contrast, often *increase* before a
@@ -123,7 +125,9 @@ plot_shapley <- function(x, indicators = NULL, top_n = NULL, order = c("value", 
   p +
     ggplot2::labs(
       x = "Shapley value (mean marginal contribution +/- 95% CI)", y = NULL,
-      caption = "Dashed line: zero contribution. Not every indicator can go negative -- see ?plot_shapley."
+      caption = paste("Dashed line: zero mean contribution. Shapley values are positive when",
+                       "the node's removal reduced the indicator, and negative when its",
+                       "removal increased it.")
     ) +
     ggplot2::theme_bw()
 }
