@@ -36,7 +36,21 @@ undirected, weighted or not -- tracks a set of robustness indicators
 nodes are removed, and provides a Monte Carlo framework for asking
 whether an observed curve is *statistically* more damaging than chance
 alone would produce. This vignette walks through that full workflow, end
-to end, on a small, well-known example network.
+to end, on a network with a documented real-world outcome to check the
+results against: does the network actually single out the two people who
+turned out, historically, to matter most?
+
+## Quick reference: which question does which function answer?
+
+| Question | Function(s) |
+|---|---|
+| How does my network degrade under random failure vs. a targeted attack? | `random_failures()`, `attack_by_*()`, `robustness()`, `plot_robustness()` |
+| Is the attack significantly worse than random failure -- overall? | `robustness_null_removal()`, `compare_robustness_index_to_null()`, `plot_r_index_null()` |
+| At which removal step does that difference actually show up? | `compare_to_null()` |
+| Same questions, but for losing relationships (edges) instead of actors (nodes)? | `random_edge_failures()`, `attack_by_edge_*()`, `edge_robustness()`, `edge_robustness_null_removal()` |
+| Is removing this one node -- or this specific group -- unusually damaging? | `knockout_robustness()`, `knockout_robustness_null_removal()`, `compare_knockout_to_null()`, `plot_knockout_null()` |
+| Which node matters most, fairly, averaged across every possible removal order? | `shapley_robustness()`, `plot_shapley()` |
+| Is my network's structure itself unusually vulnerable, compared to other networks its size? | `robustness_null_structural()` |
 
 ## Setup
 
@@ -59,25 +73,34 @@ parent session's console.
 
 ## Example network: Zachary's Karate Club
 
-We'll use Zachary's Karate Club, one of the most familiar example
-networks in network science: 34 members of a university karate club and
-the 78 friendships between them, recorded before the club famously split
-in two.
+netRobust ships Zachary's Karate Club as built-in data: 34 members of a
+university karate club and the 78 friendships between them, recorded by
+Wayne W. Zachary (1977) before the club split into two rival factions.
+Unlike the bare edge list many packages ship, this copy (`?karate`) keeps
+Zachary's original **edge weights** (interaction strength, `1`-`7`) and
+each member's **`Faction`** -- which of the two groups they actually
+joined once the club split. That split is the real-world outcome the
+robustness/knock-out/Shapley results below get checked against.
 
 ```{r}
-g <- make_graph("Zachary")
+data(karate)
+g <- karate
 g
+table(V(g)$Faction)
 ```
 
 ```{r}
-plot(g, vertex.label = NA, vertex.size = 8, vertex.color = "steelblue",
-     edge.color = "grey70", main = "Zachary's Karate Club")
+plot(g, vertex.label = NA, vertex.size = 8,
+     vertex.color = c("steelblue", "tomato")[V(g)$Faction],
+     edge.width = E(g)$weight / 3, edge.color = "grey70",
+     main = "Zachary's Karate Club (colour = eventual faction, width = tie strength)")
 ```
 
-It's undirected and unweighted, which keeps most of the workflow below
-free of extra arguments. Section
+It's undirected but genuinely weighted, which lets the rest of this
+vignette demonstrate `weights_as=` on real data instead of a synthetic
+example. Section
 ["A note on direction and weights"](#a-note-on-direction-and-weights)
-covers what changes for directed/weighted networks.
+covers both.
 
 ## Removal orders
 
@@ -94,12 +117,14 @@ d <- attack_by_degree(g)
 head(d)
 ```
 
-Both return the same shape: a named integer vector, first element =
-first vertex removed. Four more targeted-attack criteria exist --
-`attack_by_betweenness()`, `attack_by_closeness()`,
-`attack_by_eigenvector()`, and `attack_by_pagerank()` -- with the same
-`function(g) -> removal order` contract. They come back in
-["Statistical comparison across attack strategies"](#statistical-comparison-across-attack-strategies).
+John A (the club president, degree 17) and Mr Hi (the instructor, degree
+16) are removed first -- unsurprising, since the whole club revolved
+around these two long before it split around them. Both return the same
+shape: a named integer vector, first element = first vertex removed.
+Four more targeted-attack criteria exist -- `attack_by_betweenness()`,
+`attack_by_closeness()`, `attack_by_eigenvector()`, and
+`attack_by_pagerank()` -- with the same `function(g) -> removal order`
+contract.
 
 ## A note on direction and weights
 
@@ -135,9 +160,24 @@ The betweenness/closeness/eigenvector/PageRank attacks take a parallel
 networks, telling netRobust how to interpret an edge weight: as a
 **distance** (bigger weight = farther apart, used as-is) or as a
 **strength** (bigger weight = closer/stronger tie, inverted before
-being used as a distance). Both `toy` and the Karate Club above have no
-weights, so this has no effect on the examples in this vignette --
-this argument only matters once `E(g)$weight` is set.
+being used as a distance). The Karate Club's weights are interaction
+strengths, so this actually matters here:
+
+```{r}
+b_strength <- attack_by_betweenness(g, weights_as = "strength")
+b_distance <- attack_by_betweenness(g, weights_as = "distance")
+head(names(b_strength), 4)
+head(names(b_distance), 4)
+```
+
+Both remove Mr Hi first, but diverge immediately after: treating the
+weights as *strengths* removes Actor 3 second, while treating the exact
+same numbers as *distances* removes John A second instead -- the same
+weight column, read two different ways, produces two different attack
+orders. Get this backwards on your own weighted network and every
+downstream result below would answer a question you didn't mean to ask.
+
+# Part 1: Is my network vulnerable to failure or attack, overall?
 
 ## Robustness curves
 
@@ -200,7 +240,10 @@ fig
 
 When `null_envelope` is supplied, `plot_robustness()` automatically
 labels that curve "Failures (median)" and adds a caption explaining the
-shaded band -- no need to track that distinction by hand.
+shaded band -- no need to track that distinction by hand. The attack
+curve drops well below the failure envelope almost immediately: losing
+the two highest-degree members fragments the club far faster than losing
+any two members at random would.
 
 ## Does the attack differ from random failure overall?
 
@@ -230,8 +273,14 @@ every removal step separately would carry:
 compare_robustness_index_to_null(attack, null_dist, index = "giant_component_size")
 ```
 
-The same comparison, visually -- a histogram of the null's R-index
-values, with the attack's own R-index marked as a dashed line:
+The degree attack's R-index (`0.17`) sits far below the null's mean
+(`0.44`) -- on average across the whole removal sequence, the giant
+component is barely a sixth of its intact size under this attack, versus
+staying near half its size under random loss -- and the empirical
+p-value is `0`, i.e. none of the 200 random-failure replicates came
+anywhere close. The same comparison, visually -- a histogram of the
+null's R-index values, with the attack's own R-index marked as a dashed
+line:
 
 ```{r, fig.height = 4}
 plot_r_index_null(null_dist, observed = attack, index = "giant_component_size")
@@ -283,8 +332,16 @@ the detail):
 
 ```{r}
 sig <- compare_to_null(attack, null_dist)
-head(sig[order(sig$p_value), ])
+gc_sig <- sig[sig$Index == "giant_component_size", ]
+head(gc_sig, 6)
 ```
+
+Removing just John A and Mr Hi (`N = 1`-`2`) isn't yet distinguishable
+from random loss (`p = 1`) -- the club tolerates losing any two members,
+even these two, without visibly more damage than chance. The picture
+flips fast: by the third removal `p` drops to `0.05`, and from the
+fourth removal on `p = 0`. Three or four members in, the *identity* of
+who's missing starts to matter far more than random loss ever would.
 
 ## Removing edges instead of nodes
 
@@ -300,8 +357,8 @@ edge-level counterpart of `robustness()`:
 er <- random_edge_failures(g)
 ea <- attack_by_edge_betweenness(g)
 
-efailure <- edge_robustness(g, ids = er, keep = c("giant_component_size", "edge_density"))
-eattack  <- edge_robustness(g, ids = ea, keep = c("giant_component_size", "edge_density"))
+efailure <- edge_robustness(g, ids = er, keep = c("giant_component_size", "connectivity"))
+eattack  <- edge_robustness(g, ids = ea, keep = c("giant_component_size", "connectivity"))
 head(eattack)
 ```
 
@@ -323,29 +380,39 @@ compare_robustness_index_to_null(eattack, edge_null, index = "giant_component_si
 plot_r_index_null(edge_null, observed = eattack, index = "giant_component_size")
 ```
 
-The betweenness edge attack's `giant_component_size` R-index sits well
-outside the null distribution here -- the same reading as the node-level
-version earlier, just for losing relationships instead of actors.
-`compare_to_null()` (the pointwise test) and `plot_robustness()` (with a
-median curve from `summarise_null()`) work the same way too -- see the
-node-removal sections above for how to build those from a null
-distribution shaped like `edge_null`.
-
-`attack_by_edge_weight()` ranks edges directly by weight -- the network
-needs to actually be weighted for that one to mean anything:
+Same reading as the node-level version: removing the edges that carry
+the most betweenness is significantly more damaging than losing the same
+number of random relationships. Now that real weights are available,
+`attack_by_edge_weight()` can rank edges directly by tie strength --
+worth asking whether removing the *strongest* ties first is actually the
+most damaging edge strategy, or whether something else is:
 
 ```{r}
-gw <- g                                 # a local copy -- g itself stays unweighted
-set.seed(1)
-E(gw)$weight <- runif(ecount(gw))
-ew <- attack_by_edge_weight(gw)                          # strongest ties removed first
-ew_weak <- attack_by_edge_weight(gw, decreasing = FALSE)  # weakest first
+ew_strong <- attack_by_edge_weight(g, weights_as = "strength")               # strongest ties first
+ew_weak   <- attack_by_edge_weight(g, weights_as = "strength", decreasing = FALSE)  # weakest first
+
+eattack_strong <- edge_robustness(g, ids = ew_strong, keep = c("giant_component_size"))
+eattack_weak   <- edge_robustness(g, ids = ew_weak,   keep = c("giant_component_size"))
+
+compare_robustness(scenario_list = list(
+  Betweenness = eattack, `Weight (strongest first)` = eattack_strong,
+  `Weight (weakest first)` = eattack_weak
+), index = "giant_component_size")
 ```
 
-If your weights represent a *cost/distance* instead (lower = stronger
-tie) rather than a *strength* (higher = stronger tie), pass `weights_as =
-"distance"` so "strongest tie first" is still what `decreasing = TRUE`
-means -- see `?attack_by_edge_weight`.
+A genuine surprise: removing the *strongest* ties first (R-index `0.72`)
+is barely different from random edge loss (null mean `0.69`, and indeed
+not significant -- `compare_robustness_index_to_null(eattack_strong,
+edge_null, index = "giant_component_size")` gives `p = 0.34`), while
+removing the *weakest* ties first is significantly *more* damaging
+(`p = 0.005`) despite scoring worse (lower R-index, `0.63`) than
+betweenness alone. Strong ties here mostly reinforce connections that
+already exist through other paths; weak ties are more often the only
+link between two otherwise-separate parts of the club -- an edge-level
+echo of Granovetter's "strength of weak ties." If your weights represent
+a *cost/distance* instead (lower = stronger tie) rather than a
+*strength*, pass `weights_as = "distance"` so `decreasing = TRUE` still
+means "strongest tie first" -- see `?attack_by_edge_weight`.
 
 **A structural fact worth knowing:** under edge removal, `edge_density` is
 *mathematically identical* across every scenario on the same graph, not
@@ -360,14 +427,16 @@ by default they're collapsed automatically (summing weights, with a
 warning) via `on_parallel = "collapse"` -- pass `"error"` instead if
 you'd rather that stop and let you resolve it yourself.
 
+# Part 2: Which specific nodes matter?
+
 ## Testing nodes in isolation (knock-out)
 
-A different question again: not "how does the network degrade as removal
-accumulates?" but "what's the effect of *this* node -- or this specific
-*set* of nodes -- disappearing, on its own, independent of any other
-removal?" `knockout_robustness()` answers that: every group is tested
-against the *intact* network and then discarded, never against the
-result of a previous group's removal.
+A different question from Part 1: not "how does the network degrade as
+removal accumulates?" but "what's the effect of *this* node -- or this
+specific *set* of nodes -- disappearing, on its own, independent of any
+other removal?" `knockout_robustness()` answers that: every group is
+tested against the *intact* network and then discarded, never against
+the result of a previous group's removal.
 
 ```{r}
 ko <- knockout_robustness(g, keep = c("giant_component_size"))
@@ -382,18 +451,21 @@ most damage?":
 ko[which.min(ko$giant_component_size), ]
 ```
 
-`groups=` accepts an explicit list instead, for specific combinations you
-care about -- each element either vertex names or vertex indices:
+Mr Hi, alone, shrinks the giant component from 34 to 27 members -- more
+than any other single member. `groups=` accepts an explicit list
+instead, for specific combinations you care about -- each element either
+vertex names or vertex indices:
 
 ```{r}
-knockout_robustness(g, groups = list(c(1, 34), c(33, 34)), keep = c("giant_component_size"))
+knockout_robustness(g, groups = list(c("Mr Hi", "John A")), keep = c("giant_component_size"))
 ```
 
-The `group` column is a list-column holding the exact (deduplicated) set
-of vertices removed in that trial; `n_removed` is its size. Unlike
-`robustness()`/`edge_robustness()`, there's no `N`/sequential-step column
-here at all -- each row is an independent trial, not a point on a
-trajectory.
+Removing both club leaders together shrinks the giant component further
+still, to 26. The `group` column is a list-column holding the exact
+(deduplicated) set of vertices removed in that trial; `n_removed` is its
+size. Unlike `robustness()`/`edge_robustness()`, there's no
+`N`/sequential-step column here at all -- each row is an independent
+trial, not a point on a trajectory.
 
 ### Is a particular group's effect unusual?
 
@@ -402,7 +474,7 @@ column) -- they don't apply here directly. The natural question for a
 knock-out is different anyway: not "does this differ from random failure
 overall?" but *"is removing this particular node -- or this particular
 group -- more damaging than removing a random one of the same size?"*
-That's a null stratified by group size, since a 1-vertex and a 5-vertex
+That's a null stratified by group size, since a 1-vertex and a 2-vertex
 knock-out aren't on the same scale to begin with:
 
 ```{r}
@@ -410,12 +482,12 @@ knull <- knockout_robustness_null_removal(g, sizes = c(1, 2), n_reps = 200, seed
                                            keep = c("giant_component_size"))
 ```
 
-Compare the single most damaging node found above, and a specific pair,
-against same-size random groups:
+Compare Mr Hi alone, and the two leaders together, against same-size
+random groups:
 
 ```{r}
 worst <- ko[which.min(ko$giant_component_size), ]
-pair  <- knockout_robustness(g, groups = list(c(1, 34)), keep = c("giant_component_size"))
+pair  <- knockout_robustness(g, groups = list(c("Mr Hi", "John A")), keep = c("giant_component_size"))
 
 observed <- rbind(worst, pair)
 observed$group_id <- seq_len(nrow(observed))
@@ -423,9 +495,9 @@ observed$group_id <- seq_len(nrow(observed))
 compare_knockout_to_null(observed, knull, index = "giant_component_size")
 ```
 
-Both come out significant: this hub node is unusually damaging alone,
-and stays unusually damaging paired with another vertex. Visually, one
-panel per group size, each observed group as its own coloured line:
+Both come out significant: Mr Hi is unusually damaging alone, and the
+two leaders stay unusually damaging together. Visually, one panel per
+group size, each observed group as its own coloured line:
 
 ```{r, fig.height = 4}
 plot_knockout_null(knull, observed = observed, index = "giant_component_size")
@@ -456,7 +528,7 @@ every node's Shapley value simultaneously, in one pass per replicate:
 ```{r}
 shap <- shapley_robustness(g, n_reps = 200, n_perm = 200, seed = 123,
                             keep = c("giant_component_size", "mean_distance"))
-head(shap$nodes)
+head(shap$nodes[order(-shap$nodes$giant_component_size), ])
 ```
 
 `shap$nodes` is one row per vertex, with a value and a standard-error
@@ -483,50 +555,69 @@ differentiated from each other than sampling noise alone would produce?
 shap$global_test
 ```
 
-That answers *whether* nodes differ at all -- not *which* nodes differ
-from which. For that, the per-node standard errors already in
-`shap$nodes` support an informal visual comparison instead, via
-`plot_shapley()` (a forest plot, one panel per indicator, node order
-fixed across panels so a node's position can be tracked between them):
+Both indicators come back significant (`p = 0`): nodes genuinely differ
+in importance here, not just by chance. That answers *whether* nodes
+differ at all -- not *which* nodes differ from which. For that, the
+per-node standard errors already in `shap$nodes` support an informal
+visual comparison instead, via `plot_shapley()` (a forest plot, one
+panel per indicator, node order fixed across panels so a node's
+position can be tracked between them):
 
 ```{r, fig.height = 6}
 plot_shapley(shap)
 ```
 
-Node 1 -- the highest-degree hub -- stands out clearly on both
-indicators, with a confidence interval well clear of every other node's;
-most of the rest are indistinguishable from each other given this many
-replicates.
+Mr Hi and John A are, by a wide margin, the two most important nodes on
+both indicators -- their confidence intervals don't overlap with any
+other member's. That's exactly where this vignette's opening question
+gets answered: `V(g)$Faction` records which of the two factions each
+member actually joined once the club split in 1977, and Mr Hi and John A
+ended up on **opposite** factions (`1` and `2`).
+
+```{r}
+data.frame(node = c("Mr Hi", "John A"), Faction = V(g)$Faction[c(1, 34)])
+```
+
+The two nodes the Shapley values single out as most important, with no
+knowledge of the split whatsoever, are exactly the two people the club's
+real fission ended up centring on.
+
+# Part 3: Is my network's structure itself unusual?
 
 ## Structural null model
 
-`robustness_null_removal()` asks: *given this exact network, does this
-attack strategy do more damage than chance?* A different question is:
-*is this network's structure itself unusually vulnerable to this attack
-strategy, compared to other networks the same size with the same degree
-sequence?* `robustness_null_structural()` answers that one instead, by
-rewiring the network (preserving each vertex's degree) rather than
-randomising the removal order:
+`robustness_null_removal()` (Part 1) asks: *given this exact network,
+does this attack strategy do more damage than chance?* A different
+question is: *is this network's structure itself unusually vulnerable to
+this attack strategy, compared to other networks the same size with the
+same degree sequence?* `robustness_null_structural()` answers that one
+instead, by rewiring the network (preserving each vertex's degree)
+rather than randomising the removal order:
 
 ```{r}
 struct_null <- robustness_null_structural(g, attack_fn = attack_by_degree,
                                            n_reps = 200, seed = 123,
                                            keep = c("giant_component_size", "mean_distance", "connectivity"))
-robustness_index_null(struct_null, index = "giant_component_size")
+compare_robustness_index_to_null(attack, struct_null, index = "giant_component_size")
 ```
 
-This is a **pure topological** null model: edge weights, if any, are
-dropped before rewiring, since there's no principled way to carry them
-over onto a randomised topology. Pass a weight-agnostic `attack_fn` (like
+The degree attack's observed R-index (`0.17`) sits below the structural
+null's mean (`0.22`) with `p = 0.005`: this specific arrangement of ties
+-- not just the fact that a couple of members happen to have high degree
+-- makes the club more vulnerable to a degree-based attack than the
+typical network with the same size and degree sequence would be. This is
+a **pure topological** null model: edge weights, if any, are dropped
+before rewiring, since there's no principled way to carry them over onto
+a randomised topology. Pass a weight-agnostic `attack_fn` (like
 `attack_by_degree` above) when using it.
 
 ## Where to go next
 
 Every function used here has a `?` help page with the full set of
-arguments and further detail -- start with `?robustness`,
-`?edge_robustness`, `?knockout_robustness`, `?robustness_null_removal`,
-`?edge_robustness_null_removal`, `?knockout_robustness_null_removal`,
-`?robustness_null_structural`, `?compare_robustness_index_to_null`, and
-`?shapley_robustness` --
-or browse everything at once with
+arguments and further detail -- start with `?karate` for the example
+network's own documentation, then `?robustness`, `?edge_robustness`,
+`?knockout_robustness`, `?shapley_robustness`,
+`?robustness_null_removal`, `?edge_robustness_null_removal`,
+`?knockout_robustness_null_removal`, `?robustness_null_structural`, and
+`?compare_robustness_index_to_null` -- or browse everything at once with
 `help(package = "netRobust")`.
