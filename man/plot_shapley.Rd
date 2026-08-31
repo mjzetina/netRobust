@@ -42,6 +42,22 @@ More than one indicator facets via \code{ggplot2::facet_wrap(~Index, scales = "f
 \verb{order=}) so a node's position can be tracked across indicators; each
 facet strip also shows that indicator's global-test p-value.
 }
+\section{The dashed zero line}{
+
+Marks zero marginal contribution -- a node whose confidence interval
+crosses it isn't distinguishable from "no effect" at that indicator.
+Whether \emph{negative} values are possible depends on the indicator.
+\code{giant_component_size}/\code{connectivity} can only shrink or stay the same
+as vertices are removed, so their contributions are always \verb{>= 0}.
+\code{mean_distance}/\code{diameter}, by contrast, often \emph{increase} before a
+network fragments (remaining paths have to route around whatever was
+just removed) -- a node with a negative contribution there was, on
+average, a shortcut whose absence made the rest of the network less
+efficient to traverse. \code{clustering}, \code{degree_assortativity},
+\code{edge_density}, and \code{degree_centralization} aren't monotonic either and
+can go either way, without as clean an interpretation.
+}
+
 \seealso{
 \code{\link[=shapley_robustness]{shapley_robustness()}}, \code{\link[=plot_knockout_null]{plot_knockout_null()}}
 }

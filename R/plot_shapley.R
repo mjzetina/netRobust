@@ -19,6 +19,20 @@
 #' `order=`) so a node's position can be tracked across indicators; each
 #' facet strip also shows that indicator's global-test p-value.
 #'
+#' @section The dashed zero line:
+#' Marks zero marginal contribution -- a node whose confidence interval
+#' crosses it isn't distinguishable from "no effect" at that indicator.
+#' Whether *negative* values are possible depends on the indicator.
+#' `giant_component_size`/`connectivity` can only shrink or stay the same
+#' as vertices are removed, so their contributions are always `>= 0`.
+#' `mean_distance`/`diameter`, by contrast, often *increase* before a
+#' network fragments (remaining paths have to route around whatever was
+#' just removed) -- a node with a negative contribution there was, on
+#' average, a shortcut whose absence made the rest of the network less
+#' efficient to traverse. `clustering`, `degree_assortativity`,
+#' `edge_density`, and `degree_centralization` aren't monotonic either and
+#' can go either way, without as clean an interpretation.
+#'
 #' @param x Output of [shapley_robustness()].
 #' @param indicators Character vector of indicator names to plot. `NULL`
 #'   (default) plots every indicator in `x$nodes`.
@@ -107,6 +121,9 @@ plot_shapley <- function(x, indicators = NULL, top_n = NULL, order = c("value", 
   }
 
   p +
-    ggplot2::labs(x = "Shapley value (mean marginal contribution +/- 95% CI)", y = NULL) +
+    ggplot2::labs(
+      x = "Shapley value (mean marginal contribution +/- 95% CI)", y = NULL,
+      caption = "Dashed line: zero contribution. Not every indicator can go negative -- see ?plot_shapley."
+    ) +
     ggplot2::theme_bw()
 }
