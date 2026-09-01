@@ -32,7 +32,7 @@ targeted attack on their hubs.
 
 netRobust simulates both scenarios on any `igraph` object -- directed or
 undirected, weighted or not -- tracks a set of robustness indicators
-(giant component size, average path length, connectivity, and others) as
+(giant component size, mean distance, connectivity, and others) as
 nodes are removed, and provides a Monte Carlo framework for asking
 whether an observed curve is *statistically* more damaging than chance
 alone would produce. This vignette walks through that full workflow, end
@@ -400,16 +400,24 @@ compare_robustness(scenario_list = list(
 ), index = "giant_component_size")
 ```
 
-A genuine surprise: removing the *strongest* ties first (R-index `0.72`)
-is barely different from random edge loss (null mean `0.69`, and indeed
-not significant -- `compare_robustness_index_to_null(eattack_strong,
-edge_null, index = "giant_component_size")` gives `p = 0.34`), while
-removing the *weakest* ties first is significantly *more* damaging
-(`p = 0.005`) despite scoring worse (lower R-index, `0.63`) than
-betweenness alone. Strong ties here mostly reinforce connections that
-already exist through other paths; weak ties are more often the only
-link between two otherwise-separate parts of the club -- an edge-level
-echo of Granovetter's "strength of weak ties." If your weights represent
+Neither R-index alone says whether that gap from random edge loss is
+real or just noise -- the same null distribution built above answers
+that for both:
+
+```{r}
+compare_robustness_index_to_null(eattack_strong, edge_null, index = "giant_component_size")
+compare_robustness_index_to_null(eattack_weak, edge_null, index = "giant_component_size")
+```
+
+A genuine surprise: removing the *strongest* ties first is barely
+different from random edge loss and, per the first test above, not
+significant. Removing the *weakest* ties first, despite scoring worse
+(a lower, more damaging R-index) than betweenness alone, comes out
+significantly *more* damaging than random edge loss in the second test.
+Strong ties here mostly reinforce connections that already exist through
+other paths; weak ties are more often the only link between two
+otherwise-separate parts of the club -- an edge-level echo of
+Granovetter's "strength of weak ties." If your weights represent
 a *cost/distance* instead (lower = stronger tie) rather than a
 *strength*, pass `weights_as = "distance"` so `decreasing = TRUE` still
 means "strongest tie first" -- see `?attack_by_edge_weight`.
