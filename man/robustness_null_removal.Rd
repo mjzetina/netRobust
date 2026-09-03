@@ -57,6 +57,39 @@ To instead ask whether the network's \emph{structure} is unusually robust
 relative to random networks with the same degree sequence, see
 \code{\link[=robustness_null_structural]{robustness_null_structural()}}.
 }
+\section{Performance on large networks}{
+
+Every replicate recomputes every indicator at every removal step, so
+runtime scales with \verb{n_reps * vcount(g) * (indicator cost)} -- for
+\code{diameter}/\code{mean_distance} specifically, each step costs roughly
+\code{O(V * (V + E))} (all-pairs shortest paths). On a network with thousands
+of edges, the default \code{n_reps = 500} with the default indicator set can
+take a long time -- this isn't specific to netRobust, it's inherent to
+recomputing every indicator at every step, for every replicate, the same
+cost any implementation of this Albert-Jeong-Barabasi/Schneider et al.
+style simulation faces. Three practical levers, roughly in order of
+effort:
+\enumerate{
+\item \strong{Parallelise}: \code{future::plan(future::multisession)} before
+calling -- see \verb{parallel=} above.
+\item \strong{Explore with fewer replicates, finalise with more}: e.g. start
+with \code{n_reps = 50}-\code{100} while iterating on the analysis, and only
+run the full \code{n_reps} (or more) once, for the final result -- the
+standard Monte Carlo workflow, and why the default here is a modest
+500 rather than the 10,000 used for final results (see \verb{n_reps=}
+above).
+\item \strong{Restrict \verb{keep=} to cheap indicators}: \code{giant_component_size},
+\code{connectivity}, \code{clustering}, \code{edge_density}, and
+\code{degree_centralization} are comparatively cheap; \code{diameter} and
+\code{mean_distance} are the most expensive indicators in the default set.
+}
+A qualitatively faster approach exists for \code{giant_component_size}/
+\code{connectivity} specifically -- Newman & Ziff's (2001)
+\url{doi:10.1103/PhysRevE.64.016706} reverse-construction, union-find-based
+algorithm for percolation simulation -- but it doesn't extend to
+\code{diameter}/\code{mean_distance}, and isn't implemented here.
+}
+
 \seealso{
 \code{\link[=robustness]{robustness()}}, \code{\link[=random_failures]{random_failures()}}, \code{\link[=robustness_null_structural]{robustness_null_structural()}},
 \code{\link[=summarise_null]{summarise_null()}}, \code{\link[=compare_to_null]{compare_to_null()}}, \code{\link[=robustness_index_null]{robustness_index_null()}}

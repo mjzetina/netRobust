@@ -72,6 +72,37 @@
 #' relative to random networks with the same degree sequence, see
 #' [robustness_null_structural()].
 #'
+#' @section Performance on large networks:
+#' Every replicate recomputes every indicator at every removal step, so
+#' runtime scales with `n_reps * vcount(g) * (indicator cost)` -- for
+#' `diameter`/`mean_distance` specifically, each step costs roughly
+#' `O(V * (V + E))` (all-pairs shortest paths). On a network with thousands
+#' of edges, the default `n_reps = 500` with the default indicator set can
+#' take a long time -- this isn't specific to netRobust, it's inherent to
+#' recomputing every indicator at every step, for every replicate, the same
+#' cost any implementation of this Albert-Jeong-Barabasi/Schneider et al.
+#' style simulation faces. Three practical levers, roughly in order of
+#' effort:
+#' \enumerate{
+#'   \item **Parallelise**: `future::plan(future::multisession)` before
+#'     calling -- see `parallel=` above.
+#'   \item **Explore with fewer replicates, finalise with more**: e.g. start
+#'     with `n_reps = 50`-`100` while iterating on the analysis, and only
+#'     run the full `n_reps` (or more) once, for the final result -- the
+#'     standard Monte Carlo workflow, and why the default here is a modest
+#'     500 rather than the 10,000 used for final results (see `n_reps=`
+#'     above).
+#'   \item **Restrict `keep=` to cheap indicators**: `giant_component_size`,
+#'     `connectivity`, `clustering`, `edge_density`, and
+#'     `degree_centralization` are comparatively cheap; `diameter` and
+#'     `mean_distance` are the most expensive indicators in the default set.
+#' }
+#' A qualitatively faster approach exists for `giant_component_size`/
+#' `connectivity` specifically -- Newman & Ziff's (2001)
+#' <doi:10.1103/PhysRevE.64.016706> reverse-construction, union-find-based
+#' algorithm for percolation simulation -- but it doesn't extend to
+#' `diameter`/`mean_distance`, and isn't implemented here.
+#'
 #' @param g An `igraph` object.
 #' @param n_reps Number of random-failure replicates. Rubio's thesis (this
 #'   project's methodological source for this framework) uses 10,000 for
@@ -164,7 +195,9 @@ robustness_null_removal <- function(g, n_reps = 500, parallel = TRUE, seed = NUL
 #' @param rewire_niter Number of double-edge-swap trials passed to
 #'   `igraph::keeping_degseq(niter = )`. `NULL` (default) uses `10 *
 #'   ecount(g)`, a common rule of thumb for adequately randomising a graph.
-#' @param parallel,seed As in [robustness_null_removal()].
+#' @param parallel,seed As in [robustness_null_removal()] -- see its
+#'   Performance section for guidance on large networks (same cost profile
+#'   here: one full curve per replicate).
 #' @param ... Forwarded to every internal [robustness()] call -- must match
 #'   the settings used for the observed curve you're comparing against (see
 #'   [robustness_null_removal()] for why), minus any weight-related settings
@@ -240,7 +273,9 @@ robustness_null_structural <- function(g, attack_fn, n_reps = 500, rewire_niter 
 #' @param parallel,seed,... As in [robustness_null_removal()] -- `...` is
 #'   forwarded to every internal [edge_robustness()] call, and must match
 #'   whatever settings were used for the observed edge-attack curve you're
-#'   testing against.
+#'   testing against. See [robustness_null_removal()]'s Performance section
+#'   for guidance on large networks (same cost profile here: one full curve
+#'   per replicate, over `ecount(g)` steps instead of `vcount(g)`).
 #'
 #' @return A `data.frame` stacking all replicates: same columns as
 #'   [edge_robustness()]'s output, plus `rep` identifying which replicate

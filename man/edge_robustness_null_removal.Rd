@@ -26,7 +26,9 @@ weights if any, with a warning. \code{"error"} stops instead.}
 \item{parallel, seed, ...}{As in \code{\link[=robustness_null_removal]{robustness_null_removal()}} -- \code{...} is
 forwarded to every internal \code{\link[=edge_robustness]{edge_robustness()}} call, and must match
 whatever settings were used for the observed edge-attack curve you're
-testing against.}
+testing against. See \code{\link[=robustness_null_removal]{robustness_null_removal()}}'s Performance section
+for guidance on large networks (same cost profile here: one full curve
+per replicate, over \code{ecount(g)} steps instead of \code{vcount(g)}).}
 }
 \value{
 A \code{data.frame} stacking all replicates: same columns as
