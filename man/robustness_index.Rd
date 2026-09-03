@@ -4,7 +4,7 @@
 \alias{robustness_index}
 \title{Robustness index (normalised area under an indicator's curve)}
 \usage{
-robustness_index(res, index = "giant_component_size")
+robustness_index(res, index = NULL)
 }
 \arguments{
 \item{res}{Output of \code{\link[=robustness]{robustness()}} for one scenario. Must be a
@@ -13,14 +13,17 @@ an argument was misplaced when building \code{scenario_list} for
 \code{\link[=compare_robustness]{compare_robustness()}}), this errors with a message pointing at that
 likely cause rather than a confusing "column not found".}
 
-\item{index}{Name of the indicator column to summarise (default \code{"giant_component_size"},
-the giant component -- Schneider et al.'s original choice). If \code{res}
-doesn't have this column (e.g. it was excluded via \verb{exclude=}/\verb{keep=}
-when calling \code{\link[=robustness]{robustness()}}), this errors rather than silently
-returning \code{NaN}.}
+\item{index}{Character vector of indicator column name(s) to summarise.
+\code{NULL} (default) uses every indicator column present in \code{res}. If \code{res}
+doesn't have a name you asked for (e.g. it was excluded via
+\verb{exclude=}/\verb{keep=} when calling \code{\link[=robustness]{robustness()}}), this errors rather
+than silently returning \code{NaN}.}
 }
 \value{
-A single numeric value.
+A single numeric value when \code{index} resolves to exactly one
+indicator (the historical behaviour, including the \code{index = NULL}
+default on a \code{res} with only one indicator column); a named numeric
+vector, one entry per indicator, otherwise.
 }
 \description{
 Generalises the R-index of Schneider, Moreira, Andrade, Havlin & Herrmann

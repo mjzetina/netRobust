@@ -4,7 +4,7 @@
 \alias{compare_knockout_to_null}
 \title{Compare an observed knock-out against a null distribution}
 \usage{
-compare_knockout_to_null(observed, null_df, index = "giant_component_size")
+compare_knockout_to_null(observed, null_df, index = NULL)
 }
 \arguments{
 \item{observed}{Output of \code{\link[=knockout_robustness]{knockout_robustness()}} -- one or more
@@ -18,13 +18,13 @@ include every group size present in \code{observed} -- an observed group
 whose size has no matching null replicates errors, since the p-value
 would be undefined, not just imprecise.}
 
-\item{index}{Name of the indicator column to compare (default
-\code{"giant_component_size"}).}
+\item{index}{Character vector of indicator column name(s) to compare.
+\code{NULL} (default) uses every indicator column present in \code{observed}.}
 }
 \value{
-A \code{data.frame}, one row per observed group, with columns
-\code{group_id}, \code{group}, \code{n_removed}, \code{observed}, \code{null_mean}
-(same-size null replicates only), and \code{p_value}.
+A \code{data.frame} with columns \code{group_id}, \code{group}, \code{Index},
+\code{n_removed}, \code{observed}, \code{null_mean} (same-size null replicates only),
+and \code{p_value} -- one row per observed group per indicator in \code{index}.
 }
 \description{
 Empirical p-value testing whether an observed group's knock-out effect

@@ -4,11 +4,7 @@
 \alias{compare_robustness_index_to_null}
 \title{Compare an observed R-index against a null distribution}
 \usage{
-compare_robustness_index_to_null(
-  observed,
-  null_df,
-  index = "giant_component_size"
-)
+compare_robustness_index_to_null(observed, null_df, index = NULL)
 }
 \arguments{
 \item{observed}{Output of \code{\link[=robustness]{robustness()}} for the scenario being tested
@@ -19,14 +15,16 @@ compare_robustness_index_to_null(
 not \code{\link[=summarise_null]{summarise_null()}}'s output; passing that by mistake is a common
 mix-up and errors with a specific message pointing at the fix).}
 
-\item{index}{Name of the indicator column to summarise (default \code{"giant_component_size"}).}
+\item{index}{Character vector of indicator column name(s) to summarise.
+\code{NULL} (default) uses every indicator column present in \code{observed}.}
 }
 \value{
-A one-row \code{data.frame} with columns \code{observed} (the observed
+A \code{data.frame} with columns \code{Index}, \code{observed} (the observed
 R-index), \code{null_mean} (the null distribution's mean R-index -- what
 the p-value is centred on), \code{null_median} (a descriptive complement;
 if it differs a lot from \code{null_mean}, that itself signals the null
-R-index distribution is skewed), and \code{p_value}.
+R-index distribution is skewed), and \code{p_value} -- one row per indicator
+in \code{index}.
 }
 \description{
 Empirical p-value testing whether an observed scenario's R-index (from

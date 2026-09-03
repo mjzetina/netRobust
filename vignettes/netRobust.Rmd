@@ -260,7 +260,7 @@ r_index_attacks <- compare_robustness(scenario_list = list(
   Eigenvector = attack_e, PageRank = attack_p
 ), index = "giant_component_size")
 
-r_index_failures <- data.frame(Scenario = "Failures",
+r_index_failures <- data.frame(Scenario = "Failures", Index = "giant_component_size",
                                 R_index = robustness_index_null(null_dist, index = "giant_component_size"))
 
 rbind(r_index_failures, r_index_attacks)

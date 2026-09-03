@@ -4,12 +4,7 @@
 \alias{plot_knockout_null}
 \title{Plot a knock-out null distribution against observed group(s)}
 \usage{
-plot_knockout_null(
-  null_df,
-  observed = NULL,
-  index = "giant_component_size",
-  bins = 30
-)
+plot_knockout_null(null_df, observed = NULL, index = NULL, bins = 30)
 }
 \arguments{
 \item{null_df}{Output of \code{\link[=knockout_robustness_null_removal]{knockout_robustness_null_removal()}}.}
@@ -26,8 +21,8 @@ whose size has no matching null replicates in \code{null_df} still draws
 visual aid, not a significance test; use \code{\link[=compare_knockout_to_null]{compare_knockout_to_null()}}
 for that, which errors on the same situation instead.}
 
-\item{index}{Name of the indicator column to plot (default
-\code{"giant_component_size"}).}
+\item{index}{Character vector of indicator column name(s) to plot.
+\code{NULL} (default) uses every indicator column present in \code{null_df}.}
 
 \item{bins}{Number of histogram bins per panel. Default \code{30}.}
 }
@@ -42,7 +37,10 @@ marking where it falls -- the visual counterpart to
 \code{\link[=compare_knockout_to_null]{compare_knockout_to_null()}}'s p-value. A single group size produces a
 single panel; several sizes produce one panel per size, via
 \code{ggplot2::facet_wrap()}, which degrades to one panel on its own when
-there's only one size -- no special-casing needed here for that.
+there's only one size -- no special-casing needed here for that. More
+than one indicator adds a second facet dimension instead
+(\code{ggplot2::facet_grid(Index ~ n_removed)}), so each row is one indicator
+and each column is one group size.
 }
 \seealso{
 \code{\link[=compare_knockout_to_null]{compare_knockout_to_null()}}, \code{\link[=knockout_robustness_null_removal]{knockout_robustness_null_removal()}},

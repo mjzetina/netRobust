@@ -158,3 +158,40 @@ test_that("plot_knockout_null() warns (not errors) on an unmatched observed size
   expect_warning(fig <- plot_knockout_null(null_dist, observed = observed), "no matching null replicates")
   expect_s3_class(fig, "ggplot")
 })
+
+test_that("compare_knockout_to_null(): index = NULL returns one row per group per indicator", {
+  null_dist <- knockout_robustness_null_removal(g, sizes = c(1, 2), n_reps = 15, seed = 1,
+                                                 keep = c("giant_component_size", "connectivity"))
+  observed <- knockout_robustness(g, groups = list(c(1), c(33, 34)),
+                                   keep = c("giant_component_size", "connectivity"),
+                                   include_intact = FALSE)
+
+  single <- compare_knockout_to_null(observed, null_dist, index = "giant_component_size")
+  expect_equal(nrow(single), 2)
+  expect_true(all(single$Index == "giant_component_size"))
+
+  both <- compare_knockout_to_null(observed, null_dist)
+  expect_equal(nrow(both), 4)  # 2 groups x 2 indicators
+  expect_setequal(both$Index, c("giant_component_size", "connectivity"))
+  expect_equal(
+    both$observed[both$Index == "giant_component_size"],
+    single$observed
+  )
+})
+
+test_that("plot_knockout_null(): facet_grid(Index ~ n_removed) kicks in with more than one index", {
+  null_dist <- knockout_robustness_null_removal(g, sizes = c(1, 2), n_reps = 10, seed = 1,
+                                                 keep = c("giant_component_size", "connectivity"))
+  observed <- knockout_robustness(g, groups = list(c(1), c(33, 34)),
+                                   keep = c("giant_component_size", "connectivity"),
+                                   include_intact = FALSE)
+
+  fig_single <- plot_knockout_null(null_dist, observed = observed, index = "giant_component_size")
+  expect_s3_class(fig_single, "ggplot")
+  expect_s3_class(fig_single$facet, "FacetWrap")
+
+  fig_multi <- plot_knockout_null(null_dist, observed = observed)
+  expect_s3_class(fig_multi, "ggplot")
+  expect_s3_class(fig_multi$facet, "FacetGrid")
+  expect_setequal(unique(fig_multi$data$Index), c("giant_component_size", "connectivity"))
+})
