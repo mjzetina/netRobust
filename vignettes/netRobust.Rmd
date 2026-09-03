@@ -224,26 +224,24 @@ treatment -- for the comparison to be valid.
 A single random draw isn't a meaningful stand-in for "the failure
 scenario" once hundreds of replicates of it already exist. So instead of
 plotting one arbitrary `failure` curve, we plot the null distribution's
-**median** curve -- reshaping `summarise_null()`'s long-format output
-back into the wide, per-indicator shape `robustness()` produces:
-
-```{r}
-failure_median <- tidyr::pivot_wider(null_env, id_cols = N,
-                                      names_from = Index, values_from = median)
-```
+**median** curve instead -- leave `failure=` out and `plot_robustness()`
+derives it from `null_envelope` itself (`summary = "median"` is the
+default; pass `summary = "mean"` for the mean curve instead):
 
 ```{r, warning = FALSE}
-fig <- plot_robustness(failure = failure_median, attack = attack,
-                        null_envelope = null_env)
+fig <- plot_robustness(attack = attack, null_envelope = null_env)
 fig
 ```
 
-When `null_envelope` is supplied, `plot_robustness()` automatically
-labels that curve "Failures (median)" and adds a caption explaining the
-shaded band -- no need to track that distinction by hand. The attack
-curve drops well below the failure envelope almost immediately: losing
-the two highest-degree members fragments the club far faster than losing
-any two members at random would.
+`plot_robustness()` labels that derived curve "Failures (median)" and
+adds a caption explaining the shaded band automatically -- guaranteed to
+match what was actually plotted, since the function performed the
+derivation itself rather than trusting a hand-pivoted curve to really be
+the median (see `?plot_robustness` if you'd rather supply your own
+`failure=` curve, e.g. a single random draw, alongside the null
+envelope). The attack curve drops well below the failure envelope almost
+immediately: losing the two highest-degree members fragments the club
+far faster than losing any two members at random would.
 
 ## Does the attack differ from random failure overall?
 
@@ -452,8 +450,12 @@ head(ko)
 ```
 
 With no `groups=` argument, every vertex is tested individually -- one
-row per node. That's enough to answer "which single node's loss does the
-most damage?":
+row per node, plus a first reference row (`group_id = 0`) for the intact
+network itself (`include_intact = TRUE` is the default), so every group's
+effect sits in the same table as the baseline it's implicitly compared
+against. That's enough to answer "which single node's loss does the most
+damage?" -- the reference row is never picked up here, since the intact
+network is never the most damaging outcome:
 
 ```{r}
 ko[which.min(ko$giant_component_size), ]
@@ -495,7 +497,8 @@ random groups:
 
 ```{r}
 worst <- ko[which.min(ko$giant_component_size), ]
-pair  <- knockout_robustness(g, groups = list(c("Mr Hi", "John A")), keep = c("giant_component_size"))
+pair  <- knockout_robustness(g, groups = list(c("Mr Hi", "John A")), keep = c("giant_component_size"),
+                              include_intact = FALSE)
 
 observed <- rbind(worst, pair)
 observed$group_id <- seq_len(nrow(observed))
