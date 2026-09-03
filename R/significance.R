@@ -343,12 +343,15 @@ edge_robustness_null_removal <- function(g, n_reps = 500, on_parallel = c("colla
 #' @param seed Optional integer passed to `set.seed()` for reproducibility.
 #' @param ... Forwarded to the internal [knockout_robustness()] call --
 #'   must match whatever settings were used for the observed knock-out(s)
-#'   you're testing against.
+#'   you're testing against. Don't pass `include_intact=` here -- this
+#'   function always calls [knockout_robustness()] with `include_intact =
+#'   FALSE` (a reference row has no place mixed into a null distribution's
+#'   replicates), so supplying it too would error on a duplicate argument.
 #'
 #' @return A `data.frame`, same shape as [knockout_robustness()]'s output
-#'   (`group_id`, `group`, `n_removed`, one column per indicator) -- one
-#'   row per random trial, `n_removed` identifying which size stratum it
-#'   belongs to.
+#'   with `include_intact = FALSE` (`group_id`, `group`, `n_removed`, one
+#'   column per indicator) -- one row per random trial, `n_removed`
+#'   identifying which size stratum it belongs to.
 #'
 #' @seealso [knockout_robustness()], [compare_knockout_to_null()],
 #'   [plot_knockout_null()], [robustness_null_removal()]
@@ -367,7 +370,10 @@ knockout_robustness_null_removal <- function(g, sizes, n_reps = 500, seed = NULL
     recursive = FALSE
   )
 
-  knockout_robustness(g, groups = random_groups, ...)
+  # include_intact = FALSE: a reference row for the intact network has no
+  # place mixed into a null distribution's replicates (knockout_robustness()
+  # defaults to including one for direct, human-facing calls).
+  knockout_robustness(g, groups = random_groups, ..., include_intact = FALSE)
 }
 
 # --- 1e. Compare an observed knock-out against the null (size-matched) -----
@@ -385,7 +391,10 @@ knockout_robustness_null_removal <- function(g, sizes, n_reps = 500, seed = NULL
 #' least as far from their own mean as the observed group's value is.
 #'
 #' @param observed Output of [knockout_robustness()] -- one or more
-#'   groups to test.
+#'   groups to test. Its intact-network reference row, if present
+#'   (`include_intact = TRUE`, the default), is dropped automatically with
+#'   a warning -- there's no meaningful null of size 0 to compare it
+#'   against.
 #' @param null_df Output of [knockout_robustness_null_removal()]. Must
 #'   include every group size present in `observed` -- an observed group
 #'   whose size has no matching null replicates errors, since the p-value
@@ -405,6 +414,7 @@ compare_knockout_to_null <- function(observed, null_df, index = "giant_component
     stop("index = \"", index, "\" must be a column in both observed and ",
          "null_df.", call. = FALSE)
   }
+  observed <- .drop_intact_row(observed)
   missing_sizes <- setdiff(unique(observed$n_removed), unique(null_df$n_removed))
   if (length(missing_sizes) > 0) {
     stop("observed has group size(s) with no matching null replicates in ",

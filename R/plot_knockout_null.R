@@ -19,11 +19,13 @@
 #'   more groups to mark, each drawn as its own coloured vertical line
 #'   (labelled by its exact vertex names in the legend) in the panel
 #'   matching its size. `NULL` (default) omits these, e.g. to just inspect
-#'   the null's own shape. A group whose size has no matching null
-#'   replicates in `null_df` still draws (with no histogram behind it in
-#'   that panel) but warns -- this is a visual aid, not a significance
-#'   test; use [compare_knockout_to_null()] for that, which errors on the
-#'   same situation instead.
+#'   the null's own shape. Its intact-network reference row, if present
+#'   (`include_intact = TRUE`, the default), is dropped automatically with
+#'   a warning -- there's no null of size 0 to place it against. A group
+#'   whose size has no matching null replicates in `null_df` still draws
+#'   (with no histogram behind it in that panel) but warns -- this is a
+#'   visual aid, not a significance test; use [compare_knockout_to_null()]
+#'   for that, which errors on the same situation instead.
 #' @param index Name of the indicator column to plot (default
 #'   `"giant_component_size"`).
 #' @param bins Number of histogram bins per panel. Default `30`.
@@ -49,6 +51,7 @@ plot_knockout_null <- function(null_df, observed = NULL, index = "giant_componen
     )
 
   if (!is.null(observed)) {
+    observed <- .drop_intact_row(observed)
     missing_sizes <- setdiff(unique(observed$n_removed), unique(null_df$n_removed))
     if (length(missing_sizes) > 0) {
       warning(length(missing_sizes), " observed group size(s) have no matching ",

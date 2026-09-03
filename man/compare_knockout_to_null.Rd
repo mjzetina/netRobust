@@ -8,7 +8,10 @@ compare_knockout_to_null(observed, null_df, index = "giant_component_size")
 }
 \arguments{
 \item{observed}{Output of \code{\link[=knockout_robustness]{knockout_robustness()}} -- one or more
-groups to test.}
+groups to test. Its intact-network reference row, if present
+(\code{include_intact = TRUE}, the default), is dropped automatically with
+a warning -- there's no meaningful null of size 0 to compare it
+against.}
 
 \item{null_df}{Output of \code{\link[=knockout_robustness_null_removal]{knockout_robustness_null_removal()}}. Must
 include every group size present in \code{observed} -- an observed group

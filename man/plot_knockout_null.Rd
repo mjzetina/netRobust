@@ -18,11 +18,13 @@ plot_knockout_null(
 more groups to mark, each drawn as its own coloured vertical line
 (labelled by its exact vertex names in the legend) in the panel
 matching its size. \code{NULL} (default) omits these, e.g. to just inspect
-the null's own shape. A group whose size has no matching null
-replicates in \code{null_df} still draws (with no histogram behind it in
-that panel) but warns -- this is a visual aid, not a significance
-test; use \code{\link[=compare_knockout_to_null]{compare_knockout_to_null()}} for that, which errors on the
-same situation instead.}
+the null's own shape. Its intact-network reference row, if present
+(\code{include_intact = TRUE}, the default), is dropped automatically with
+a warning -- there's no null of size 0 to place it against. A group
+whose size has no matching null replicates in \code{null_df} still draws
+(with no histogram behind it in that panel) but warns -- this is a
+visual aid, not a significance test; use \code{\link[=compare_knockout_to_null]{compare_knockout_to_null()}}
+for that, which errors on the same situation instead.}
 
 \item{index}{Name of the indicator column to plot (default
 \code{"giant_component_size"}).}

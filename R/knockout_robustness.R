@@ -54,6 +54,24 @@
   unname(lapply(resolved, unique))
 }
 
+# --- Strip the intact-network reference row before a null comparison -------
+# knockout_robustness()'s include_intact = TRUE default prepends a
+# group_id = 0 / n_removed = 0 row for the intact network. There's no
+# meaningful null of size 0 to test it against, so
+# compare_knockout_to_null()/plot_knockout_null() both drop it here first
+# (warning once) instead of treating it as an unmatched group size.
+.drop_intact_row <- function(observed) {
+  is_intact <- observed$n_removed == 0
+  if (any(is_intact)) {
+    warning(sum(is_intact), " row(s) in observed are the intact-network ",
+            "reference (n_removed = 0, from knockout_robustness()'s ",
+            "include_intact = TRUE default) -- excluded, since there's no ",
+            "meaningful null of size 0 to compare against.", call. = FALSE)
+    observed <- observed[!is_intact, ]
+  }
+  observed
+}
+
 # --- Isolated-removal ("knock-out") robustness ------------------------------
 #' Isolated-removal ("knock-out") robustness
 #'
@@ -83,23 +101,38 @@
 #'   at silently.
 #' @param indicators,exclude,keep,custom,optional,directed,component_mode,mode,weights,weights_as
 #'   As in [robustness()].
+#' @param include_intact If `TRUE` (default), prepends a reference row for
+#'   the *intact* network (nothing removed) -- `group_id = 0`, `group =
+#'   character(0)`, `n_removed = 0` -- so every group's indicator values sit
+#'   in the same table as the baseline they're implicitly compared against,
+#'   instead of requiring you to look that value up separately (e.g. via
+#'   `robustness()`'s own `N = 1` row, or recomputing it by hand). Never
+#'   picked up by patterns like `res[which.min(res$giant_component_size),
+#'   ]` -- the intact network's indicator values are never the most
+#'   damaging outcome. Set `FALSE` to get the previous behaviour (one row
+#'   per group, nothing else) -- e.g. [knockout_robustness_null_removal()]
+#'   does this internally, since a reference row has no place mixed into a
+#'   null distribution's replicates.
 #'
-#' @return A `data.frame`, one row per group, with columns:
+#' @return A `data.frame` with columns:
 #'   \describe{
-#'     \item{`group_id`}{Integer, `1:length(groups)`, identifying each
-#'       trial in the order given (or vertex order, if `groups = NULL`).}
+#'     \item{`group_id`}{Integer, `1:length(groups)` for each trial in the
+#'       order given (or vertex order, if `groups = NULL`); `0` for the
+#'       intact-network reference row, if `include_intact = TRUE`.}
 #'     \item{`group`}{List-column: the exact, deduplicated vertex names
-#'       removed in that trial.}
-#'     \item{`n_removed`}{Group size, after deduplication.}
+#'       removed in that trial (`character(0)` for the reference row).}
+#'     \item{`n_removed`}{Group size, after deduplication (`0` for the
+#'       reference row).}
 #'   }
-#'   plus one column per indicator.
+#'   plus one column per indicator -- one row per group (plus the
+#'   intact-network reference row first, if `include_intact = TRUE`).
 #'
 #' @seealso [robustness()], [edge_robustness()], [list_indicators()]
 #' @export
 knockout_robustness <- function(g, groups = NULL, indicators = NULL, exclude = NULL, keep = NULL,
                                  custom = NULL, optional = NULL,
                                  directed = NULL, component_mode = "weak", mode = NULL,
-                                 weights = NULL, weights_as = NULL) {
+                                 weights = NULL, weights_as = NULL, include_intact = TRUE) {
   setup <- .resolve_robustness_setup(g, indicators, exclude, keep, custom, optional,
                                       directed, component_mode, mode, weights, weights_as)
   g <- setup$g
@@ -118,5 +151,15 @@ knockout_robustness <- function(g, groups = NULL, indicators = NULL, exclude = N
   df <- do.call(rbind.data.frame, rows)
   df$group <- groups
   rownames(df) <- NULL
-  df[, c("group_id", "group", "n_removed", setdiff(names(df), c("group_id", "group", "n_removed")))]
+  df <- df[, c("group_id", "group", "n_removed", setdiff(names(df), c("group_id", "group", "n_removed")))]
+
+  if (include_intact) {
+    baseline <- do.call(data.frame, c(list(group_id = 0L, n_removed = 0L),
+                                       .compute_indicator_row(g, setup$indicators)))
+    baseline$group <- list(character(0))
+    df <- rbind(baseline[, names(df)], df)
+    rownames(df) <- NULL
+  }
+
+  df
 }
