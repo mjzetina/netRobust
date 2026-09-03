@@ -43,3 +43,12 @@ test_that("the caption names the actual summary used when derived, and stays gen
   fig2 <- plot_robustness(attack = attack, failure = failure_draw, null_envelope = null_env)
   expect_false(grepl("median|mean", fig2$labels$caption))
 })
+
+test_that("the caption reports the envelope's true coverage, not a hardcoded 95%", {
+  fig95 <- plot_robustness(attack = attack, null_envelope = null_env)
+  expect_true(grepl("95% envelope", fig95$labels$caption))
+
+  null_env80 <- summarise_null(null_dist, probs = c(lower = 0.1, median = 0.5, upper = 0.9))
+  fig80 <- plot_robustness(attack = attack, null_envelope = null_env80)
+  expect_true(grepl("80% envelope", fig80$labels$caption))
+})

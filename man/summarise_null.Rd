@@ -11,14 +11,24 @@ summarise_null(null_df, probs = c(lower = 0.025, median = 0.5, upper = 0.975))
 \code{\link[=robustness_null_structural]{robustness_null_structural()}} (wide format, one column per indicator
 plus \code{N} and \code{rep}).}
 
-\item{probs}{Named numeric vector of three quantiles to compute. Must be
-named \code{lower}, \code{median}, \code{upper} (the names -- not \code{quantile()}'s own
-auto-generated labels -- are what determine the output column names).}
+\item{probs}{Named numeric vector of three quantile \emph{levels} (each in
+\verb{[0, 1]}) to compute -- default \code{c(lower = 0.025, median = 0.5, upper = 0.975)}, the 2.5th/50th/97.5th percentiles across replicates (a 95\%
+envelope: \code{upper - lower = 0.95}). The names -- not \code{quantile()}'s own
+auto-generated labels -- are what determine the output column names
+(\code{lower}/\code{median}/\code{upper}), so changing \verb{probs=} changes which
+quantiles those \emph{columns} hold without changing their names -- e.g.
+\code{probs = c(lower = 0.1, median = 0.5, upper = 0.9)} gives an 80\%
+envelope, still reported in columns called \code{lower}/\code{upper}. The levels
+actually used are attached to the return value as \code{attr(result, "probs")}, which \code{\link[=plot_robustness]{plot_robustness()}} reads to caption the envelope's
+true coverage instead of assuming 95\%.}
 }
 \value{
 A \code{data.frame} with columns \code{Index}, \code{N}, \code{mean}, \code{lower},
 \code{median}, \code{upper} -- long format, one row per indicator per removal
-step.
+step. \code{lower}/\code{median}/\code{upper} are the quantiles named by \verb{probs=}
+(2.5\%/50\%/97.5\% by default) -- see \verb{probs=} above for what those
+column names actually mean numerically, and where to find the exact
+levels used (\code{attr(result, "probs")}).
 }
 \description{
 Collapses the many replicates from \code{\link[=robustness_null_removal]{robustness_null_removal()}} or

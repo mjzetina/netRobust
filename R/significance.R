@@ -460,13 +460,25 @@ compare_knockout_to_null <- function(observed, null_df, index = "giant_component
 #' @param null_df Output of [robustness_null_removal()] or
 #'   [robustness_null_structural()] (wide format, one column per indicator
 #'   plus `N` and `rep`).
-#' @param probs Named numeric vector of three quantiles to compute. Must be
-#'   named `lower`, `median`, `upper` (the names -- not `quantile()`'s own
-#'   auto-generated labels -- are what determine the output column names).
+#' @param probs Named numeric vector of three quantile *levels* (each in
+#'   `[0, 1]`) to compute -- default `c(lower = 0.025, median = 0.5, upper =
+#'   0.975)`, the 2.5th/50th/97.5th percentiles across replicates (a 95%
+#'   envelope: `upper - lower = 0.95`). The names -- not `quantile()`'s own
+#'   auto-generated labels -- are what determine the output column names
+#'   (`lower`/`median`/`upper`), so changing `probs=` changes which
+#'   quantiles those *columns* hold without changing their names -- e.g.
+#'   `probs = c(lower = 0.1, median = 0.5, upper = 0.9)` gives an 80%
+#'   envelope, still reported in columns called `lower`/`upper`. The levels
+#'   actually used are attached to the return value as `attr(result,
+#'   "probs")`, which [plot_robustness()] reads to caption the envelope's
+#'   true coverage instead of assuming 95%.
 #'
 #' @return A `data.frame` with columns `Index`, `N`, `mean`, `lower`,
 #'   `median`, `upper` -- long format, one row per indicator per removal
-#'   step.
+#'   step. `lower`/`median`/`upper` are the quantiles named by `probs=`
+#'   (2.5%/50%/97.5% by default) -- see `probs=` above for what those
+#'   column names actually mean numerically, and where to find the exact
+#'   levels used (`attr(result, "probs")`).
 #'
 #' @seealso [robustness_null_removal()], [robustness_null_structural()],
 #'   [plot_robustness()]
@@ -475,7 +487,7 @@ summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper
   # Requires: dplyr, tidyr (already used elsewhere in the project)
   idx_cols <- setdiff(names(null_df), c("N", "rep"))
 
-  null_df |>
+  out <- null_df |>
     tidyr::pivot_longer(cols = tidyr::all_of(idx_cols), names_to = "Index", values_to = "Value") |>
     dplyr::group_by(Index, N) |>
     dplyr::summarise(
@@ -485,6 +497,8 @@ summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper
       upper  = stats::quantile(Value, probs["upper"],  na.rm = TRUE),
       .groups = "drop"
     )
+  attr(out, "probs") <- probs
+  out
 }
 
 # --- 3. Compare an observed curve (e.g. an attack) against the null --------

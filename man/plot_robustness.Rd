@@ -29,7 +29,10 @@ supplied yourself represents -- see \verb{failure_label=} to set a more
 specific one.}
 
 \item{null_envelope}{Optional output of \code{\link[=summarise_null]{summarise_null()}}. If supplied,
-drawn as a shaded 95\% reference band behind the curves. When \code{failure}
+drawn as a shaded reference band behind the curves, captioned with its
+true coverage (\code{attr(null_envelope, "probs")}, as set by
+\code{\link[=summarise_null]{summarise_null()}}'s \verb{probs=}) -- 95\% unless you customised \verb{probs=}
+when building it. When \code{failure}
 is \emph{not} also supplied, it's derived from this null distribution's
 \verb{summary=} column instead (\code{tidyr::pivot_wider(null_envelope, id_cols = N, names_from = Index, values_from = summary)}), and labelled
 \code{"Failures (<summary>)"} -- guaranteed to match what's actually plotted,

@@ -21,7 +21,10 @@
 #'   supplied yourself represents -- see `failure_label=` to set a more
 #'   specific one.
 #' @param null_envelope Optional output of [summarise_null()]. If supplied,
-#'   drawn as a shaded 95% reference band behind the curves. When `failure`
+#'   drawn as a shaded reference band behind the curves, captioned with its
+#'   true coverage (`attr(null_envelope, "probs")`, as set by
+#'   [summarise_null()]'s `probs=`) -- 95% unless you customised `probs=`
+#'   when building it. When `failure`
 #'   is *not* also supplied, it's derived from this null distribution's
 #'   `summary=` column instead (`tidyr::pivot_wider(null_envelope, id_cols =
 #'   N, names_from = Index, values_from = summary)`), and labelled
@@ -122,6 +125,18 @@ plot_robustness <- function(attack, failure = NULL, null_envelope = NULL,
       ggplot2::aes(x = N, ymin = lower, ymax = upper),
       inherit.aes = FALSE, alpha = 0.15, fill = null_color
     )
+    # summarise_null() attaches the quantile levels it actually used as a
+    # "probs" attribute -- read the true coverage from there instead of
+    # assuming 95% (its default, but not necessarily what was used), the
+    # same reasoning as failure_label= not presuming a statistic it can't
+    # verify. Falls back to "95%" if null_envelope wasn't built that way
+    # (e.g. constructed by hand).
+    envelope_probs <- attr(null_envelope, "probs")
+    envelope_pct <- if (!is.null(envelope_probs) && all(c("lower", "upper") %in% names(envelope_probs))) {
+      paste0(round(100 * (envelope_probs[["upper"]] - envelope_probs[["lower"]])), "%")
+    } else {
+      "95%"
+    }
   }
 
   if (!is.null(scenario_colors)) {
@@ -140,9 +155,10 @@ plot_robustness <- function(attack, failure = NULL, null_envelope = NULL,
          caption = if (is.null(null_envelope)) {
            NULL
          } else if (failure_derived) {
-           paste0("Line: ", summary, " across null-model replicates. Shaded band: 95% envelope.")
+           paste0("Line: ", summary, " across null-model replicates. Shaded band: ",
+                  envelope_pct, " envelope.")
          } else {
-           "Shaded band: 95% envelope across null-model replicates."
+           paste0("Shaded band: ", envelope_pct, " envelope across null-model replicates.")
          }) +
     ggplot2::theme_bw() +
     ggplot2::theme(legend.position = "bottom")
