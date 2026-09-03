@@ -4,7 +4,13 @@
 \alias{plot_knockout_null}
 \title{Plot a knock-out null distribution against observed group(s)}
 \usage{
-plot_knockout_null(null_df, observed = NULL, index = NULL, bins = 30)
+plot_knockout_null(
+  null_df,
+  observed = NULL,
+  index = NULL,
+  bins = 30,
+  null_color = "grey40"
+)
 }
 \arguments{
 \item{null_df}{Output of \code{\link[=knockout_robustness_null_removal]{knockout_robustness_null_removal()}}.}
@@ -25,6 +31,10 @@ for that, which errors on the same situation instead.}
 \code{NULL} (default) uses every indicator column present in \code{null_df}.}
 
 \item{bins}{Number of histogram bins per panel. Default \code{30}.}
+
+\item{null_color}{Fill colour for the histogram bars, representing the
+null distribution -- same role and default (\code{"grey40"}) as
+\code{\link[=plot_robustness]{plot_robustness()}}'s \verb{null_color=}.}
 }
 \value{
 A \code{ggplot} object (add further layers/themes with \code{+} as usual).

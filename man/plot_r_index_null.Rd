@@ -4,7 +4,13 @@
 \alias{plot_r_index_null}
 \title{Plot a null R-index distribution against an observed value}
 \usage{
-plot_r_index_null(null_df, observed = NULL, index = NULL, bins = 30)
+plot_r_index_null(
+  null_df,
+  observed = NULL,
+  index = NULL,
+  bins = 30,
+  null_color = "grey40"
+)
 }
 \arguments{
 \item{null_df}{Output of \code{\link[=robustness_null_removal]{robustness_null_removal()}} or
@@ -23,6 +29,10 @@ More than one facets via \code{ggplot2::facet_wrap(~Index, scales = "free_x")} (
 as \code{\link[=plot_shapley]{plot_shapley()}}.}
 
 \item{bins}{Number of histogram bins per panel. Default \code{30}.}
+
+\item{null_color}{Fill colour for the histogram bars, representing the
+null distribution -- same role and default (\code{"grey40"}) as
+\code{\link[=plot_robustness]{plot_robustness()}}'s \verb{null_color=}.}
 }
 \value{
 A \code{ggplot} object (add further layers/themes with \code{+} as usual).

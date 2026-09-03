@@ -4,7 +4,13 @@
 \alias{plot_shapley}
 \title{Plot per-node Shapley values, optionally faceted by indicator}
 \usage{
-plot_shapley(x, indicators = NULL, top_n = NULL, order = c("value", "vertex"))
+plot_shapley(
+  x,
+  indicators = NULL,
+  top_n = NULL,
+  order = c("value", "vertex"),
+  null_color = "grey40"
+)
 }
 \arguments{
 \item{x}{Output of \code{\link[=shapley_robustness]{shapley_robustness()}}.}
@@ -23,6 +29,10 @@ value across the plotted indicators, so the biggest/smallest
 contributors sit at opposite ends -- the point of a forest plot.
 \code{"vertex"} keeps \code{g}'s original vertex order instead, e.g. to line
 this plot up against another output that also uses vertex order.}
+
+\item{null_color}{Colour for the dashed zero-contribution reference line
+-- same role and default (\code{"grey40"}) as \code{\link[=plot_robustness]{plot_robustness()}}'s
+\verb{null_color=}.}
 }
 \value{
 A \code{ggplot} object.

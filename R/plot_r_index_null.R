@@ -23,13 +23,17 @@
 #'   "free_x")` (R-indices aren't on comparable scales), the same pattern
 #'   as [plot_shapley()].
 #' @param bins Number of histogram bins per panel. Default `30`.
+#' @param null_color Fill colour for the histogram bars, representing the
+#'   null distribution -- same role and default (`"grey40"`) as
+#'   [plot_robustness()]'s `null_color=`.
 #'
 #' @return A `ggplot` object (add further layers/themes with `+` as usual).
 #'
 #' @seealso [compare_robustness_index_to_null()], [robustness_index_null()],
 #'   [robustness_index()]
 #' @export
-plot_r_index_null <- function(null_df, observed = NULL, index = NULL, bins = 30) {
+plot_r_index_null <- function(null_df, observed = NULL, index = NULL, bins = 30,
+                               null_color = "grey40") {
   mat <- .robustness_index_per_replicate(null_df, index = index)
   index <- colnames(mat)  # NULL resolved to every indicator present, inside the helper above
   df <- do.call(rbind, lapply(index, function(ix) {
@@ -37,7 +41,7 @@ plot_r_index_null <- function(null_df, observed = NULL, index = NULL, bins = 30)
   }))
 
   p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$R_index)) +
-    ggplot2::geom_histogram(bins = bins, fill = "grey70", colour = "white")
+    ggplot2::geom_histogram(bins = bins, fill = null_color, colour = "white")
 
   if (length(index) > 1) {
     p <- p + ggplot2::facet_wrap(~Index, scales = "free_x")

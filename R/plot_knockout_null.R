@@ -32,13 +32,17 @@
 #' @param index Character vector of indicator column name(s) to plot.
 #'   `NULL` (default) uses every indicator column present in `null_df`.
 #' @param bins Number of histogram bins per panel. Default `30`.
+#' @param null_color Fill colour for the histogram bars, representing the
+#'   null distribution -- same role and default (`"grey40"`) as
+#'   [plot_robustness()]'s `null_color=`.
 #'
 #' @return A `ggplot` object (add further layers/themes with `+` as usual).
 #'
 #' @seealso [compare_knockout_to_null()], [knockout_robustness_null_removal()],
 #'   [knockout_robustness()], [plot_r_index_null()]
 #' @export
-plot_knockout_null <- function(null_df, observed = NULL, index = NULL, bins = 30) {
+plot_knockout_null <- function(null_df, observed = NULL, index = NULL, bins = 30,
+                                null_color = "grey40") {
   idx_cols <- setdiff(names(null_df), c("group_id", "group", "n_removed"))
   if (is.null(index)) index <- idx_cols
   unknown <- setdiff(index, idx_cols)
@@ -52,7 +56,7 @@ plot_knockout_null <- function(null_df, observed = NULL, index = NULL, bins = 30
   }))
 
   p <- ggplot2::ggplot(long, ggplot2::aes(x = .data$.value)) +
-    ggplot2::geom_histogram(bins = bins, fill = "grey70", colour = "white")
+    ggplot2::geom_histogram(bins = bins, fill = null_color, colour = "white")
 
   size_labeller <- function(x) paste("Group size:", x)
   if (length(index) > 1) {

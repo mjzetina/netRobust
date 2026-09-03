@@ -48,12 +48,16 @@
 #'   contributors sit at opposite ends -- the point of a forest plot.
 #'   `"vertex"` keeps `g`'s original vertex order instead, e.g. to line
 #'   this plot up against another output that also uses vertex order.
+#' @param null_color Colour for the dashed zero-contribution reference line
+#'   -- same role and default (`"grey40"`) as [plot_robustness()]'s
+#'   `null_color=`.
 #'
 #' @return A `ggplot` object.
 #'
 #' @seealso [shapley_robustness()], [plot_knockout_null()]
 #' @export
-plot_shapley <- function(x, indicators = NULL, top_n = NULL, order = c("value", "vertex")) {
+plot_shapley <- function(x, indicators = NULL, top_n = NULL, order = c("value", "vertex"),
+                          null_color = "grey40") {
   order <- match.arg(order)
   if (!inherits(x, "shapley_robustness")) {
     stop("x must be the output of shapley_robustness().", call. = FALSE)
@@ -108,7 +112,7 @@ plot_shapley <- function(x, indicators = NULL, top_n = NULL, order = c("value", 
   }
 
   p <- ggplot2::ggplot(long, ggplot2::aes(x = .data$.value, y = .data$node)) +
-    ggplot2::geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+    ggplot2::geom_vline(xintercept = 0, linetype = "dashed", colour = null_color) +
     ggplot2::geom_pointrange(
       ggplot2::aes(xmin = .data$.value - 1.96 * .data$.se, xmax = .data$.value + 1.96 * .data$.se)
     )
