@@ -16,7 +16,8 @@ knockout_robustness(
   component_mode = "weak",
   mode = NULL,
   weights = NULL,
-  weights_as = NULL
+  weights_as = NULL,
+  include_intact = TRUE
 )
 }
 \arguments{
@@ -36,17 +37,31 @@ name errors instead -- that's invalid input, not something to guess
 at silently.}
 
 \item{indicators, exclude, keep, custom, optional, directed, component_mode, mode, weights, weights_as}{As in \code{\link[=robustness]{robustness()}}.}
+
+\item{include_intact}{If \code{TRUE} (default), prepends a reference row for
+the \emph{intact} network (nothing removed) -- \code{group_id = 0}, \code{group = character(0)}, \code{n_removed = 0} -- so every group's indicator values sit
+in the same table as the baseline they're implicitly compared against,
+instead of requiring you to look that value up separately (e.g. via
+\code{robustness()}'s own \code{N = 1} row, or recomputing it by hand). Never
+picked up by patterns like \code{res[which.min(res$giant_component_size), ]} -- the intact network's indicator values are never the most
+damaging outcome. Set \code{FALSE} to get the previous behaviour (one row
+per group, nothing else) -- e.g. \code{\link[=knockout_robustness_null_removal]{knockout_robustness_null_removal()}}
+does this internally, since a reference row has no place mixed into a
+null distribution's replicates.}
 }
 \value{
-A \code{data.frame}, one row per group, with columns:
+A \code{data.frame} with columns:
 \describe{
-\item{\code{group_id}}{Integer, \code{1:length(groups)}, identifying each
-trial in the order given (or vertex order, if \code{groups = NULL}).}
+\item{\code{group_id}}{Integer, \code{1:length(groups)} for each trial in the
+order given (or vertex order, if \code{groups = NULL}); \code{0} for the
+intact-network reference row, if \code{include_intact = TRUE}.}
 \item{\code{group}}{List-column: the exact, deduplicated vertex names
-removed in that trial.}
-\item{\code{n_removed}}{Group size, after deduplication.}
+removed in that trial (\code{character(0)} for the reference row).}
+\item{\code{n_removed}}{Group size, after deduplication (\code{0} for the
+reference row).}
 }
-plus one column per indicator.
+plus one column per indicator -- one row per group (plus the
+intact-network reference row first, if \code{include_intact = TRUE}).
 }
 \description{
 Tests the isolated effect of removing one or more vertices at a time,

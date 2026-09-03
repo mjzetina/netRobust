@@ -43,6 +43,20 @@
   invisible(NULL)
 }
 
+# Whether replicates should actually run through future.apply -- TRUE only
+# when `parallel = TRUE`, the future.apply package is installed, AND a real
+# (non-sequential) future::plan() with more than one worker is active. Package
+# availability alone used to be the only check, which silently misfired: under
+# future's default *sequential* plan, future_lapply() runs in the very same
+# process plain lapply() would -- so gating the console spinner on "is
+# future.apply installed" (reasoned as "a worker has no console access")
+# suppressed it even when there was no separate worker at all, leaving
+# long-running replicates with no visible feedback and no actual speed-up.
+.use_parallel <- function(parallel) {
+  parallel && requireNamespace("future.apply", quietly = TRUE) &&
+    future::nbrOfWorkers() > 1
+}
+
 # --- 1. Build the null distribution (removal-order randomisation) ----------
 #' Monte Carlo null distribution of robustness curves (random removal order)
 #'
@@ -58,16 +72,51 @@
 #' relative to random networks with the same degree sequence, see
 #' [robustness_null_structural()].
 #'
+#' @section Performance on large networks:
+#' Every replicate recomputes every indicator at every removal step, so
+#' runtime scales with `n_reps * vcount(g) * (indicator cost)` -- for
+#' `diameter`/`mean_distance` specifically, each step costs roughly
+#' `O(V * (V + E))` (all-pairs shortest paths). On a network with thousands
+#' of edges, the default `n_reps = 500` with the default indicator set can
+#' take a long time -- this isn't specific to netRobust, it's inherent to
+#' recomputing every indicator at every step, for every replicate, the same
+#' cost any implementation of this Albert-Jeong-Barabasi/Schneider et al.
+#' style simulation faces. Three practical levers, roughly in order of
+#' effort:
+#' \enumerate{
+#'   \item **Parallelise**: `future::plan(future::multisession)` before
+#'     calling -- see `parallel=` above.
+#'   \item **Explore with fewer replicates, finalise with more**: e.g. start
+#'     with `n_reps = 50`-`100` while iterating on the analysis, and only
+#'     run the full `n_reps` (or more) once, for the final result -- the
+#'     standard Monte Carlo workflow, and why the default here is a modest
+#'     500 rather than the 10,000 used for final results (see `n_reps=`
+#'     above).
+#'   \item **Restrict `keep=` to cheap indicators**: `giant_component_size`,
+#'     `connectivity`, `clustering`, `edge_density`, and
+#'     `degree_centralization` are comparatively cheap; `diameter` and
+#'     `mean_distance` are the most expensive indicators in the default set.
+#' }
+#' A qualitatively faster approach exists for `giant_component_size`/
+#' `connectivity` specifically -- Newman & Ziff's (2001)
+#' <doi:10.1103/PhysRevE.64.016706> reverse-construction, union-find-based
+#' algorithm for percolation simulation -- but it doesn't extend to
+#' `diameter`/`mean_distance`, and isn't implemented here.
+#'
 #' @param g An `igraph` object.
 #' @param n_reps Number of random-failure replicates. Rubio's thesis (this
 #'   project's methodological source for this framework) uses 10,000 for
 #'   final results; lower values (the default 500) are fine for quick
 #'   exploration.
-#' @param parallel If `TRUE` (default) and the `future.apply` package is
-#'   installed, replicates run in parallel across whatever backend was set
-#'   with `future::plan()` (e.g. `future::plan(future::multisession)`).
-#'   Falls back to sequential `lapply()` if `future.apply` isn't installed,
-#'   with no error.
+#' @param parallel If `TRUE` (default), the `future.apply` package is
+#'   installed, AND a non-sequential backend has actually been set with
+#'   `future::plan()` (e.g. `future::plan(future::multisession)`), replicates
+#'   run in parallel across that backend. Installing `future.apply` alone
+#'   isn't enough -- without an explicit `future::plan()` call, replicates
+#'   run sequentially via plain `lapply()` regardless of this argument, with
+#'   the console progress indicator shown (see `.console_progress()`'s
+#'   notes): a `future.apply` worker only lacks console access once a real,
+#'   separate worker process exists.
 #' @param seed Optional integer passed to `set.seed()` for reproducibility.
 #' @param ... Forwarded as-is to every internal [robustness()] call (e.g.
 #'   `indicators=`, `exclude=`, `keep=`, `custom=`, `directed=`,
@@ -90,7 +139,7 @@
 #' @export
 robustness_null_removal <- function(g, n_reps = 500, parallel = TRUE, seed = NULL, ...) {
   if (!is.null(seed)) set.seed(seed)
-  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
+  use_parallel <- .use_parallel(parallel)
 
   run_one <- function(i) {
     ids <- random_failures(g)
@@ -146,7 +195,9 @@ robustness_null_removal <- function(g, n_reps = 500, parallel = TRUE, seed = NUL
 #' @param rewire_niter Number of double-edge-swap trials passed to
 #'   `igraph::keeping_degseq(niter = )`. `NULL` (default) uses `10 *
 #'   ecount(g)`, a common rule of thumb for adequately randomising a graph.
-#' @param parallel,seed As in [robustness_null_removal()].
+#' @param parallel,seed As in [robustness_null_removal()] -- see its
+#'   Performance section for guidance on large networks (same cost profile
+#'   here: one full curve per replicate).
 #' @param ... Forwarded to every internal [robustness()] call -- must match
 #'   the settings used for the observed curve you're comparing against (see
 #'   [robustness_null_removal()] for why), minus any weight-related settings
@@ -162,7 +213,7 @@ robustness_null_structural <- function(g, attack_fn, n_reps = 500, rewire_niter 
                                         parallel = TRUE, seed = NULL, ...) {
   if (!is.null(seed)) set.seed(seed)
   if (is.null(rewire_niter)) rewire_niter <- 10 * ecount(g)
-  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
+  use_parallel <- .use_parallel(parallel)
 
   # Weights are stripped by design (see Details) -- robustness()'s own
   # "weights_as has no effect on an unweighted graph" warning would otherwise
@@ -222,7 +273,9 @@ robustness_null_structural <- function(g, attack_fn, n_reps = 500, rewire_niter 
 #' @param parallel,seed,... As in [robustness_null_removal()] -- `...` is
 #'   forwarded to every internal [edge_robustness()] call, and must match
 #'   whatever settings were used for the observed edge-attack curve you're
-#'   testing against.
+#'   testing against. See [robustness_null_removal()]'s Performance section
+#'   for guidance on large networks (same cost profile here: one full curve
+#'   per replicate, over `ecount(g)` steps instead of `vcount(g)`).
 #'
 #' @return A `data.frame` stacking all replicates: same columns as
 #'   [edge_robustness()]'s output, plus `rep` identifying which replicate
@@ -244,7 +297,7 @@ edge_robustness_null_removal <- function(g, n_reps = 500, on_parallel = c("colla
   # otherwise re-check it separately, doubling that noise again).
   g <- .prepare_edge_graph(g, on_parallel = on_parallel)
   if (!is.null(seed)) set.seed(seed)
-  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
+  use_parallel <- .use_parallel(parallel)
 
   run_one <- function(i) {
     ids <- random_edge_failures(g)
@@ -290,12 +343,15 @@ edge_robustness_null_removal <- function(g, n_reps = 500, on_parallel = c("colla
 #' @param seed Optional integer passed to `set.seed()` for reproducibility.
 #' @param ... Forwarded to the internal [knockout_robustness()] call --
 #'   must match whatever settings were used for the observed knock-out(s)
-#'   you're testing against.
+#'   you're testing against. Don't pass `include_intact=` here -- this
+#'   function always calls [knockout_robustness()] with `include_intact =
+#'   FALSE` (a reference row has no place mixed into a null distribution's
+#'   replicates), so supplying it too would error on a duplicate argument.
 #'
 #' @return A `data.frame`, same shape as [knockout_robustness()]'s output
-#'   (`group_id`, `group`, `n_removed`, one column per indicator) -- one
-#'   row per random trial, `n_removed` identifying which size stratum it
-#'   belongs to.
+#'   with `include_intact = FALSE` (`group_id`, `group`, `n_removed`, one
+#'   column per indicator) -- one row per random trial, `n_removed`
+#'   identifying which size stratum it belongs to.
 #'
 #' @seealso [knockout_robustness()], [compare_knockout_to_null()],
 #'   [plot_knockout_null()], [robustness_null_removal()]
@@ -314,7 +370,10 @@ knockout_robustness_null_removal <- function(g, sizes, n_reps = 500, seed = NULL
     recursive = FALSE
   )
 
-  knockout_robustness(g, groups = random_groups, ...)
+  # include_intact = FALSE: a reference row for the intact network has no
+  # place mixed into a null distribution's replicates (knockout_robustness()
+  # defaults to including one for direct, human-facing calls).
+  knockout_robustness(g, groups = random_groups, ..., include_intact = FALSE)
 }
 
 # --- 1e. Compare an observed knock-out against the null (size-matched) -----
@@ -332,25 +391,37 @@ knockout_robustness_null_removal <- function(g, sizes, n_reps = 500, seed = NULL
 #' least as far from their own mean as the observed group's value is.
 #'
 #' @param observed Output of [knockout_robustness()] -- one or more
-#'   groups to test.
+#'   groups to test. Its intact-network reference row, if present
+#'   (`include_intact = TRUE`, the default), is dropped automatically with
+#'   a warning -- there's no meaningful null of size 0 to compare it
+#'   against.
 #' @param null_df Output of [knockout_robustness_null_removal()]. Must
 #'   include every group size present in `observed` -- an observed group
 #'   whose size has no matching null replicates errors, since the p-value
 #'   would be undefined, not just imprecise.
-#' @param index Name of the indicator column to compare (default
-#'   `"giant_component_size"`).
+#' @param index Character vector of indicator column name(s) to compare.
+#'   `NULL` (default) uses every indicator column present in `observed`.
 #'
-#' @return A `data.frame`, one row per observed group, with columns
-#'   `group_id`, `group`, `n_removed`, `observed`, `null_mean`
-#'   (same-size null replicates only), and `p_value`.
+#' @return A `data.frame` with columns `group_id`, `group`, `Index`,
+#'   `n_removed`, `observed`, `null_mean` (same-size null replicates only),
+#'   and `p_value` -- one row per observed group per indicator in `index`.
 #'
 #' @seealso [knockout_robustness()], [knockout_robustness_null_removal()],
 #'   [plot_knockout_null()], [compare_to_null()]
 #' @export
-compare_knockout_to_null <- function(observed, null_df, index = "giant_component_size") {
-  if (!index %in% names(observed) || !index %in% names(null_df)) {
-    stop("index = \"", index, "\" must be a column in both observed and ",
-         "null_df.", call. = FALSE)
+compare_knockout_to_null <- function(observed, null_df, index = NULL) {
+  observed <- .drop_intact_row(observed)
+  idx_cols <- setdiff(names(observed), c("group_id", "group", "n_removed"))
+  if (is.null(index)) index <- idx_cols
+  unknown_obs <- setdiff(index, idx_cols)
+  if (length(unknown_obs) > 0) {
+    stop("index has name(s) not found in observed: ", paste(unknown_obs, collapse = ", "),
+         ".", call. = FALSE)
+  }
+  unknown_null <- setdiff(index, names(null_df))
+  if (length(unknown_null) > 0) {
+    stop("index has name(s) not found in null_df: ", paste(unknown_null, collapse = ", "),
+         ".", call. = FALSE)
   }
   missing_sizes <- setdiff(unique(observed$n_removed), unique(null_df$n_removed))
   if (length(missing_sizes) > 0) {
@@ -360,28 +431,32 @@ compare_knockout_to_null <- function(observed, null_df, index = "giant_component
          "these size(s) first.", call. = FALSE)
   }
 
-  p <- vapply(seq_len(nrow(observed)), function(i) {
-    sz <- observed$n_removed[i]
-    obs_val <- observed[[index]][i]
-    null_vals <- null_df[[index]][null_df$n_removed == sz]
-    if (length(null_vals) == 0 || is.na(obs_val)) return(NA_real_)
-    center <- mean(null_vals, na.rm = TRUE)
-    mean(abs(null_vals - center) >= abs(obs_val - center), na.rm = TRUE)
-  }, numeric(1))
+  out <- lapply(index, function(ix) {
+    p <- vapply(seq_len(nrow(observed)), function(i) {
+      sz <- observed$n_removed[i]
+      obs_val <- observed[[ix]][i]
+      null_vals <- null_df[[ix]][null_df$n_removed == sz]
+      if (length(null_vals) == 0 || is.na(obs_val)) return(NA_real_)
+      center <- mean(null_vals, na.rm = TRUE)
+      mean(abs(null_vals - center) >= abs(obs_val - center), na.rm = TRUE)
+    }, numeric(1))
 
-  null_mean <- vapply(observed$n_removed, function(sz) {
-    mean(null_df[[index]][null_df$n_removed == sz], na.rm = TRUE)
-  }, numeric(1))
+    null_mean <- vapply(observed$n_removed, function(sz) {
+      mean(null_df[[ix]][null_df$n_removed == sz], na.rm = TRUE)
+    }, numeric(1))
 
-  out <- data.frame(
-    group_id  = observed$group_id,
-    n_removed = observed$n_removed,
-    observed  = observed[[index]],
-    null_mean = unname(null_mean),
-    p_value   = p
-  )
-  out$group <- observed$group
-  out[, c("group_id", "group", "n_removed", "observed", "null_mean", "p_value")]
+    data.frame(
+      group_id  = observed$group_id,
+      Index     = ix,
+      n_removed = observed$n_removed,
+      observed  = observed[[ix]],
+      null_mean = unname(null_mean),
+      p_value   = p
+    )
+  })
+  out <- do.call(rbind, out)
+  out$group <- rep(observed$group, length(index))
+  out[, c("group_id", "group", "Index", "n_removed", "observed", "null_mean", "p_value")]
 }
 
 # --- 2. Summarise the null into a quantile envelope per N ------------------
@@ -397,13 +472,25 @@ compare_knockout_to_null <- function(observed, null_df, index = "giant_component
 #' @param null_df Output of [robustness_null_removal()] or
 #'   [robustness_null_structural()] (wide format, one column per indicator
 #'   plus `N` and `rep`).
-#' @param probs Named numeric vector of three quantiles to compute. Must be
-#'   named `lower`, `median`, `upper` (the names -- not `quantile()`'s own
-#'   auto-generated labels -- are what determine the output column names).
+#' @param probs Named numeric vector of three quantile *levels* (each in
+#'   `[0, 1]`) to compute -- default `c(lower = 0.025, median = 0.5, upper =
+#'   0.975)`, the 2.5th/50th/97.5th percentiles across replicates (a 95%
+#'   envelope: `upper - lower = 0.95`). The names -- not `quantile()`'s own
+#'   auto-generated labels -- are what determine the output column names
+#'   (`lower`/`median`/`upper`), so changing `probs=` changes which
+#'   quantiles those *columns* hold without changing their names -- e.g.
+#'   `probs = c(lower = 0.1, median = 0.5, upper = 0.9)` gives an 80%
+#'   envelope, still reported in columns called `lower`/`upper`. The levels
+#'   actually used are attached to the return value as `attr(result,
+#'   "probs")`, which [plot_robustness()] reads to caption the envelope's
+#'   true coverage instead of assuming 95%.
 #'
 #' @return A `data.frame` with columns `Index`, `N`, `mean`, `lower`,
 #'   `median`, `upper` -- long format, one row per indicator per removal
-#'   step.
+#'   step. `lower`/`median`/`upper` are the quantiles named by `probs=`
+#'   (2.5%/50%/97.5% by default) -- see `probs=` above for what those
+#'   column names actually mean numerically, and where to find the exact
+#'   levels used (`attr(result, "probs")`).
 #'
 #' @seealso [robustness_null_removal()], [robustness_null_structural()],
 #'   [plot_robustness()]
@@ -412,7 +499,7 @@ summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper
   # Requires: dplyr, tidyr (already used elsewhere in the project)
   idx_cols <- setdiff(names(null_df), c("N", "rep"))
 
-  null_df |>
+  out <- null_df |>
     tidyr::pivot_longer(cols = tidyr::all_of(idx_cols), names_to = "Index", values_to = "Value") |>
     dplyr::group_by(Index, N) |>
     dplyr::summarise(
@@ -422,6 +509,8 @@ summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper
       upper  = stats::quantile(Value, probs["upper"],  na.rm = TRUE),
       .groups = "drop"
     )
+  attr(out, "probs") <- probs
+  out
 }
 
 # --- 3. Compare an observed curve (e.g. an attack) against the null --------
@@ -505,18 +594,21 @@ compare_to_null <- function(observed, null_df) {
 #'   an argument was misplaced when building `scenario_list` for
 #'   [compare_robustness()]), this errors with a message pointing at that
 #'   likely cause rather than a confusing "column not found".
-#' @param index Name of the indicator column to summarise (default `"giant_component_size"`,
-#'   the giant component -- Schneider et al.'s original choice). If `res`
-#'   doesn't have this column (e.g. it was excluded via `exclude=`/`keep=`
-#'   when calling [robustness()]), this errors rather than silently
-#'   returning `NaN`.
+#' @param index Character vector of indicator column name(s) to summarise.
+#'   `NULL` (default) uses every indicator column present in `res`. If `res`
+#'   doesn't have a name you asked for (e.g. it was excluded via
+#'   `exclude=`/`keep=` when calling [robustness()]), this errors rather
+#'   than silently returning `NaN`.
 #'
-#' @return A single numeric value.
+#' @return A single numeric value when `index` resolves to exactly one
+#'   indicator (the historical behaviour, including the `index = NULL`
+#'   default on a `res` with only one indicator column); a named numeric
+#'   vector, one entry per indicator, otherwise.
 #'
 #' @seealso [robustness()], [compare_robustness()], [robustness_index_null()],
 #'   [compare_robustness_index_to_null()]
 #' @export
-robustness_index <- function(res, index = "giant_component_size") {
+robustness_index <- function(res, index = NULL) {
   if (!is.data.frame(res)) {
     stop("res must be a data.frame returned by robustness() -- got a ",
          paste(class(res), collapse = "/"), ". This usually means an argument ",
@@ -524,12 +616,18 @@ robustness_index <- function(res, index = "giant_component_size") {
          "the list() passed to compare_robustness() instead of after it.",
          call. = FALSE)
   }
-  if (!index %in% names(res)) {
-    stop("index = \"", index, "\" not found in res. Available columns: ",
-         paste(setdiff(names(res), "N"), collapse = ", "), ".", call. = FALSE)
+  if (is.null(index)) index <- setdiff(names(res), "N")
+  unknown <- setdiff(index, names(res))
+  if (length(unknown) > 0) {
+    stop("index has name(s) not found in res: ", paste(unknown, collapse = ", "),
+         ". Available columns: ", paste(setdiff(names(res), "N"), collapse = ", "),
+         ".", call. = FALSE)
   }
-  vals <- res[[index]]
-  mean(vals / vals[1], na.rm = TRUE)
+  result <- vapply(index, function(ix) {
+    vals <- res[[ix]]
+    mean(vals / vals[1], na.rm = TRUE)
+  }, numeric(1))
+  if (length(result) == 1) unname(result) else result
 }
 
 #' Compare robustness indices across several removal scenarios
@@ -540,30 +638,60 @@ robustness_index <- function(res, index = "giant_component_size") {
 #'
 #' @param scenario_list A named list of [robustness()] outputs, e.g.
 #'   `list(Failures = failure, Degree = attack, PageRank = resilience_pr)`.
-#' @param index Name of the indicator column to summarise (default `"giant_component_size"`).
+#' @param index Character vector of indicator column name(s) to summarise.
+#'   `NULL` (default) uses every indicator column common to *all* scenarios
+#'   in `scenario_list` (their `robustness()` calls need not have used the
+#'   same `keep=`/`exclude=`) -- errors if there's no overlap at all.
 #'
-#' @return A `data.frame` with columns `Scenario` and `R_index`, one row
-#'   per element of `scenario_list`.
+#' @return A `data.frame` with columns `Scenario`, `Index`, and `R_index`,
+#'   one row per scenario per indicator.
 #'
 #' @seealso [robustness_index()], [robustness()]
 #' @export
-compare_robustness <- function(scenario_list, index = "giant_component_size") {
-  r_index <- vapply(names(scenario_list), function(nm) {
-    tryCatch(
-      robustness_index(scenario_list[[nm]], index = index),
-      error = function(e) stop("scenario \"", nm, "\": ", conditionMessage(e), call. = FALSE)
-    )
-  }, numeric(1))
-  data.frame(Scenario = names(scenario_list), R_index = r_index, row.names = NULL)
+compare_robustness <- function(scenario_list, index = NULL) {
+  if (is.null(index)) {
+    cols_per_scenario <- lapply(scenario_list, function(x) {
+      if (!is.data.frame(x)) {
+        stop("every element of scenario_list must be a data.frame returned ",
+             "by robustness() -- got a ", paste(class(x), collapse = "/"),
+             ". This usually means an argument landed in the wrong place, ",
+             "e.g. index= accidentally placed inside the list() instead of ",
+             "after it.", call. = FALSE)
+      }
+      setdiff(names(x), "N")
+    })
+    index <- Reduce(intersect, cols_per_scenario)
+    if (length(index) == 0) {
+      stop("scenario_list's elements share no common indicator columns -- ",
+           "pass index= explicitly to pick one/some that are present in ",
+           "every scenario.", call. = FALSE)
+    }
+  }
+
+  out <- lapply(index, function(ix) {
+    r_index <- vapply(names(scenario_list), function(nm) {
+      tryCatch(
+        robustness_index(scenario_list[[nm]], index = ix),
+        error = function(e) stop("scenario \"", nm, "\": ", conditionMessage(e), call. = FALSE)
+      )
+    }, numeric(1))
+    data.frame(Scenario = names(scenario_list), Index = ix, R_index = r_index, row.names = NULL)
+  })
+  do.call(rbind, out)
 }
 
 # --- 5. Per-replicate R-index (internal, shared) ----------------------------
 # Splits a null distribution into its replicates and computes robustness_index()
-# on each one -- the shared computation behind robustness_index_null(),
-# compare_robustness_index_to_null(), and plot_r_index_null(). Not exported:
-# the per-replicate vector itself isn't meant to be a user-facing deliverable
-# (there's nothing to read off ~500 raw numbers directly), it's the raw
-# material each of those three functions summarises for its own purpose.
+# on each one, for every requested indicator -- the shared computation behind
+# robustness_index_null(), compare_robustness_index_to_null(), and
+# plot_r_index_null(). Not exported: the per-replicate values aren't meant to
+# be a user-facing deliverable (there's nothing to read off ~500 raw numbers
+# directly), they're the raw material each of those three functions
+# summarises for its own purpose.
+#
+# The split() is the expensive part of this -- done ONCE here and reused for
+# every index requested, rather than each caller (or, before index= accepted
+# more than one, each separate call) re-splitting null_df from scratch.
 #
 # Detects the most likely way to end up here by mistake: passing
 # summarise_null()'s output (long format, an `Index` column, no `rep`
@@ -572,7 +700,11 @@ compare_robustness <- function(scenario_list, index = "giant_component_size") {
 # `rep` column). Both objects get called "null_something" in typical code,
 # so this is an easy mix-up -- worth a specific message instead of the
 # generic "column not found" that `index` not matching would otherwise give.
-.robustness_index_per_replicate <- function(null_df, index = "giant_component_size") {
+#
+# Returns an n_reps x length(index) matrix (one column per indicator, named),
+# regardless of length(index) -- callers colMeans()/index by column name
+# without needing to special-case a single index into a bare vector.
+.robustness_index_per_replicate <- function(null_df, index = NULL) {
   if ("Index" %in% names(null_df) && !("rep" %in% names(null_df))) {
     stop("null_df looks like the output of summarise_null() (it has an ",
          "`Index` column but no `rep` column), not a raw null distribution. ",
@@ -580,12 +712,26 @@ compare_robustness <- function(scenario_list, index = "giant_component_size") {
          "robustness_null_structural() instead (the one you'd pass TO ",
          "summarise_null(), not what it returns).", call. = FALSE)
   }
-  if (!index %in% names(null_df)) {
-    stop("index = \"", index, "\" not found in null_df. Available columns: ",
-         paste(setdiff(names(null_df), c("N", "rep")), collapse = ", "), ".", call. = FALSE)
+  idx_cols <- setdiff(names(null_df), c("N", "rep"))
+  if (is.null(index)) index <- idx_cols
+  unknown <- setdiff(index, idx_cols)
+  if (length(unknown) > 0) {
+    stop("index has name(s) not found in null_df: ", paste(unknown, collapse = ", "),
+         ". Available columns: ", paste(idx_cols, collapse = ", "), ".", call. = FALSE)
   }
-  reps <- split(null_df[, c("N", index)], null_df$rep)
-  vapply(reps, robustness_index, numeric(1), index = index)
+
+  reps <- split(null_df, null_df$rep)
+  # vapply(reps, ..., numeric(length(index))) would collapse to a plain
+  # (wrongly-oriented) vector when length(index) == 1 -- vapply's own
+  # simplification rule, not something t() then undoes correctly. Building
+  # the matrix explicitly from a flat, row-major vector sidesteps that
+  # entirely, for any length(index).
+  values <- unlist(lapply(reps, function(rep_df) {
+    vapply(index, function(ix) robustness_index(rep_df, index = ix), numeric(1))
+  }), use.names = FALSE)
+  mat <- matrix(values, nrow = length(reps), ncol = length(index), byrow = TRUE)
+  colnames(mat) <- index
+  mat
 }
 
 # --- 6. Null-distribution R-index (mean across replicates) -----------------
@@ -628,16 +774,21 @@ compare_robustness <- function(scenario_list, index = "giant_component_size") {
 #'
 #' @param null_df Output of [robustness_null_removal()] or
 #'   [robustness_null_structural()] (wide format, with a `rep` column).
-#' @param index Name of the indicator column to summarise (default `"giant_component_size"`).
+#' @param index Character vector of indicator column name(s) to summarise.
+#'   `NULL` (default) uses every indicator column present in `null_df`.
 #'
-#' @return A single numeric value: the mean R-index across replicates.
+#' @return A single numeric value (the mean R-index across replicates) when
+#'   `index` resolves to exactly one indicator; a named numeric vector, one
+#'   entry per indicator, otherwise.
 #'
 #' @seealso [robustness_index()], [compare_robustness()],
 #'   [compare_robustness_index_to_null()], [plot_r_index_null()],
 #'   [robustness_null_removal()], [robustness_null_structural()]
 #' @export
-robustness_index_null <- function(null_df, index = "giant_component_size") {
-  mean(.robustness_index_per_replicate(null_df, index = index), na.rm = TRUE)
+robustness_index_null <- function(null_df, index = NULL) {
+  mat <- .robustness_index_per_replicate(null_df, index = index)
+  result <- colMeans(mat, na.rm = TRUE)
+  if (length(result) == 1) unname(result) else result
 }
 
 # --- 7. Compare an observed R-index against the null (global test) ---------
@@ -665,26 +816,35 @@ robustness_index_null <- function(null_df, index = "giant_component_size") {
 #'   [robustness_null_structural()] (the raw, wide-format replicates --
 #'   not [summarise_null()]'s output; passing that by mistake is a common
 #'   mix-up and errors with a specific message pointing at the fix).
-#' @param index Name of the indicator column to summarise (default `"giant_component_size"`).
+#' @param index Character vector of indicator column name(s) to summarise.
+#'   `NULL` (default) uses every indicator column present in `observed`.
 #'
-#' @return A one-row `data.frame` with columns `observed` (the observed
+#' @return A `data.frame` with columns `Index`, `observed` (the observed
 #'   R-index), `null_mean` (the null distribution's mean R-index -- what
 #'   the p-value is centred on), `null_median` (a descriptive complement;
 #'   if it differs a lot from `null_mean`, that itself signals the null
-#'   R-index distribution is skewed), and `p_value`.
+#'   R-index distribution is skewed), and `p_value` -- one row per indicator
+#'   in `index`.
 #'
 #' @seealso [robustness_index()], [robustness_index_null()],
 #'   [compare_to_null()], [plot_r_index_null()]
 #' @export
-compare_robustness_index_to_null <- function(observed, null_df, index = "giant_component_size") {
-  obs_index <- robustness_index(observed, index = index)
-  null_vals <- .robustness_index_per_replicate(null_df, index = index)
-  center <- mean(null_vals, na.rm = TRUE)
-  p <- mean(abs(null_vals - center) >= abs(obs_index - center), na.rm = TRUE)
-  data.frame(
-    observed    = obs_index,
-    null_mean   = center,
-    null_median = stats::median(null_vals, na.rm = TRUE),
-    p_value     = p
-  )
+compare_robustness_index_to_null <- function(observed, null_df, index = NULL) {
+  if (is.null(index)) index <- setdiff(names(observed), "N")
+  null_mat <- .robustness_index_per_replicate(null_df, index = index)
+
+  out <- lapply(index, function(ix) {
+    obs_index <- robustness_index(observed, index = ix)
+    null_vals <- null_mat[, ix]
+    center <- mean(null_vals, na.rm = TRUE)
+    p <- mean(abs(null_vals - center) >= abs(obs_index - center), na.rm = TRUE)
+    data.frame(
+      Index       = ix,
+      observed    = obs_index,
+      null_mean   = center,
+      null_median = stats::median(null_vals, na.rm = TRUE),
+      p_value     = p
+    )
+  })
+  do.call(rbind, out)
 }

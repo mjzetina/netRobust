@@ -7,8 +7,9 @@
 plot_knockout_null(
   null_df,
   observed = NULL,
-  index = "giant_component_size",
-  bins = 30
+  index = NULL,
+  bins = 30,
+  null_color = "grey40"
 )
 }
 \arguments{
@@ -18,16 +19,22 @@ plot_knockout_null(
 more groups to mark, each drawn as its own coloured vertical line
 (labelled by its exact vertex names in the legend) in the panel
 matching its size. \code{NULL} (default) omits these, e.g. to just inspect
-the null's own shape. A group whose size has no matching null
-replicates in \code{null_df} still draws (with no histogram behind it in
-that panel) but warns -- this is a visual aid, not a significance
-test; use \code{\link[=compare_knockout_to_null]{compare_knockout_to_null()}} for that, which errors on the
-same situation instead.}
+the null's own shape. Its intact-network reference row, if present
+(\code{include_intact = TRUE}, the default), is dropped automatically with
+a warning -- there's no null of size 0 to place it against. A group
+whose size has no matching null replicates in \code{null_df} still draws
+(with no histogram behind it in that panel) but warns -- this is a
+visual aid, not a significance test; use \code{\link[=compare_knockout_to_null]{compare_knockout_to_null()}}
+for that, which errors on the same situation instead.}
 
-\item{index}{Name of the indicator column to plot (default
-\code{"giant_component_size"}).}
+\item{index}{Character vector of indicator column name(s) to plot.
+\code{NULL} (default) uses every indicator column present in \code{null_df}.}
 
 \item{bins}{Number of histogram bins per panel. Default \code{30}.}
+
+\item{null_color}{Fill colour for the histogram bars, representing the
+null distribution -- same role and default (\code{"grey40"}) as
+\code{\link[=plot_robustness]{plot_robustness()}}'s \verb{null_color=}.}
 }
 \value{
 A \code{ggplot} object (add further layers/themes with \code{+} as usual).
@@ -40,7 +47,10 @@ marking where it falls -- the visual counterpart to
 \code{\link[=compare_knockout_to_null]{compare_knockout_to_null()}}'s p-value. A single group size produces a
 single panel; several sizes produce one panel per size, via
 \code{ggplot2::facet_wrap()}, which degrades to one panel on its own when
-there's only one size -- no special-casing needed here for that.
+there's only one size -- no special-casing needed here for that. More
+than one indicator adds a second facet dimension instead
+(\code{ggplot2::facet_grid(Index ~ n_removed)}), so each row is one indicator
+and each column is one group size.
 }
 \seealso{
 \code{\link[=compare_knockout_to_null]{compare_knockout_to_null()}}, \code{\link[=knockout_robustness_null_removal]{knockout_robustness_null_removal()}},

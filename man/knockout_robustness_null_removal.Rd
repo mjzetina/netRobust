@@ -20,13 +20,15 @@ total number of trials is \code{n_reps * length(sizes)}).}
 
 \item{...}{Forwarded to the internal \code{\link[=knockout_robustness]{knockout_robustness()}} call --
 must match whatever settings were used for the observed knock-out(s)
-you're testing against.}
+you're testing against. Don't pass \verb{include_intact=} here -- this
+function always calls \code{\link[=knockout_robustness]{knockout_robustness()}} with \code{include_intact = FALSE} (a reference row has no place mixed into a null distribution's
+replicates), so supplying it too would error on a duplicate argument.}
 }
 \value{
 A \code{data.frame}, same shape as \code{\link[=knockout_robustness]{knockout_robustness()}}'s output
-(\code{group_id}, \code{group}, \code{n_removed}, one column per indicator) -- one
-row per random trial, \code{n_removed} identifying which size stratum it
-belongs to.
+with \code{include_intact = FALSE} (\code{group_id}, \code{group}, \code{n_removed}, one
+column per indicator) -- one row per random trial, \code{n_removed}
+identifying which size stratum it belongs to.
 }
 \description{
 The \code{\link[=knockout_robustness]{knockout_robustness()}} counterpart of \code{\link[=robustness_null_removal]{robustness_null_removal()}}:

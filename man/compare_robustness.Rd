@@ -4,17 +4,20 @@
 \alias{compare_robustness}
 \title{Compare robustness indices across several removal scenarios}
 \usage{
-compare_robustness(scenario_list, index = "giant_component_size")
+compare_robustness(scenario_list, index = NULL)
 }
 \arguments{
 \item{scenario_list}{A named list of \code{\link[=robustness]{robustness()}} outputs, e.g.
 \code{list(Failures = failure, Degree = attack, PageRank = resilience_pr)}.}
 
-\item{index}{Name of the indicator column to summarise (default \code{"giant_component_size"}).}
+\item{index}{Character vector of indicator column name(s) to summarise.
+\code{NULL} (default) uses every indicator column common to \emph{all} scenarios
+in \code{scenario_list} (their \code{robustness()} calls need not have used the
+same \verb{keep=}/\verb{exclude=}) -- errors if there's no overlap at all.}
 }
 \value{
-A \code{data.frame} with columns \code{Scenario} and \code{R_index}, one row
-per element of \code{scenario_list}.
+A \code{data.frame} with columns \code{Scenario}, \code{Index}, and \code{R_index},
+one row per scenario per indicator.
 }
 \description{
 Applies \code{\link[=robustness_index]{robustness_index()}} to a named list of \code{\link[=robustness]{robustness()}} results

@@ -7,8 +7,9 @@
 plot_r_index_null(
   null_df,
   observed = NULL,
-  index = "giant_component_size",
-  bins = 30
+  index = NULL,
+  bins = 30,
+  null_color = "grey40"
 )
 }
 \arguments{
@@ -22,9 +23,16 @@ mark on the plot (e.g. an \verb{attack_by_*()} curve) -- drawn as a
 vertical line at its R-index. \code{NULL} (default) omits the line, e.g.
 to just inspect the null distribution's own shape.}
 
-\item{index}{Name of the indicator column to summarise (default \code{"giant_component_size"}).}
+\item{index}{Character vector of indicator column name(s) to summarise.
+\code{NULL} (default) uses every indicator column present in \code{null_df}.
+More than one facets via \code{ggplot2::facet_wrap(~Index, scales = "free_x")} (R-indices aren't on comparable scales), the same pattern
+as \code{\link[=plot_shapley]{plot_shapley()}}.}
 
-\item{bins}{Number of histogram bins. Default \code{30}.}
+\item{bins}{Number of histogram bins per panel. Default \code{30}.}
+
+\item{null_color}{Fill colour for the histogram bars, representing the
+null distribution -- same role and default (\code{"grey40"}) as
+\code{\link[=plot_robustness]{plot_robustness()}}'s \verb{null_color=}.}
 }
 \value{
 A \code{ggplot} object (add further layers/themes with \code{+} as usual).
