@@ -14,11 +14,15 @@ project's methodological source for this framework) uses 10,000 for
 final results; lower values (the default 500) are fine for quick
 exploration.}
 
-\item{parallel}{If \code{TRUE} (default) and the \code{future.apply} package is
-installed, replicates run in parallel across whatever backend was set
-with \code{future::plan()} (e.g. \code{future::plan(future::multisession)}).
-Falls back to sequential \code{lapply()} if \code{future.apply} isn't installed,
-with no error.}
+\item{parallel}{If \code{TRUE} (default), the \code{future.apply} package is
+installed, AND a non-sequential backend has actually been set with
+\code{future::plan()} (e.g. \code{future::plan(future::multisession)}), replicates
+run in parallel across that backend. Installing \code{future.apply} alone
+isn't enough -- without an explicit \code{future::plan()} call, replicates
+run sequentially via plain \code{lapply()} regardless of this argument, with
+the console progress indicator shown (see \code{.console_progress()}'s
+notes): a \code{future.apply} worker only lacks console access once a real,
+separate worker process exists.}
 
 \item{seed}{Optional integer passed to \code{set.seed()} for reproducibility.}
 

@@ -5,29 +5,47 @@
 \title{Plot robustness curves for failures and attack scenarios}
 \usage{
 plot_robustness(
-  failure,
   attack,
+  failure = NULL,
   null_envelope = NULL,
+  summary = c("median", "mean"),
+  failure_label = NULL,
   scenario_colors = c(Attack = "#1F77B4", Failures = "#D62728"),
   null_color = "grey40"
 )
 }
 \arguments{
-\item{failure, attack}{Output of \code{\link[=robustness]{robustness()}} for the failure and
-attack scenarios, respectively. When plotting against a null model,
-\code{failure} should be the \emph{median} curve from that null distribution
-rather than a single \code{\link[=random_failures]{random_failures()}} draw -- e.g.
-\code{tidyr::pivot_wider(null_envelope, id_cols = N, names_from = Index, values_from = median)} -- since a lone random draw isn't a meaningful
-representative of the null once you already have many replicates of it.
-The legend/caption reflect this automatically when \code{null_envelope} is
-supplied (see \code{null_envelope} below).}
+\item{attack}{Output of \code{\link[=robustness]{robustness()}}/\code{\link[=edge_robustness]{edge_robustness()}} for the attack
+scenario.}
+
+\item{failure}{Output of \code{\link[=robustness]{robustness()}}/\code{\link[=edge_robustness]{edge_robustness()}} for the
+failure scenario, OR \code{NULL} (default) to derive it automatically from
+\code{null_envelope} -- see \verb{summary=} below. Supplying \code{failure} explicitly
+(e.g. a single \code{\link[=random_failures]{random_failures()}} draw) is still supported, including
+alongside \code{null_envelope} (drawn as the shaded band behind it); in that
+case the curve is labelled with the plain \code{"Failures"}, since this
+function has no way to verify what statistic, if any, a curve you
+supplied yourself represents -- see \verb{failure_label=} to set a more
+specific one.}
 
 \item{null_envelope}{Optional output of \code{\link[=summarise_null]{summarise_null()}}. If supplied,
-drawn as a shaded 95\% reference band behind the curves, and the
-\code{failure} curve is labelled "Failures (median)" in the legend/caption
-(on the assumption that \code{failure} is that null's median curve, per
-above) instead of the plain "Failures" used when no null model is
-involved.}
+drawn as a shaded 95\% reference band behind the curves. When \code{failure}
+is \emph{not} also supplied, it's derived from this null distribution's
+\verb{summary=} column instead (\code{tidyr::pivot_wider(null_envelope, id_cols = N, names_from = Index, values_from = summary)}), and labelled
+\code{"Failures (<summary>)"} -- guaranteed to match what's actually plotted,
+since this function performed the derivation itself, rather than
+trusting a \verb{failure=} you pivoted by hand to actually be that statistic.}
+
+\item{summary}{\code{"median"} (default) or \code{"mean"}: which column of
+\code{null_envelope} to use as the failure curve when \code{failure = NULL}.
+Ignored if \code{failure} is supplied explicitly.}
+
+\item{failure_label}{Optional character string overriding the failure
+curve's legend/colour-scale label (both when derived automatically and
+when \code{failure} is supplied explicitly). \code{NULL} (default) uses
+\code{"Failures (<summary>)"} when \code{failure} was derived from
+\code{null_envelope}, or plain \code{"Failures"} when you supplied \code{failure}
+yourself.}
 
 \item{scenario_colors}{Named character vector of two hex colours, named
 \code{"Attack"} and \code{"Failures"}, controlling the curve colours. Defaults

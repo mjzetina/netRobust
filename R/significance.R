@@ -43,6 +43,20 @@
   invisible(NULL)
 }
 
+# Whether replicates should actually run through future.apply -- TRUE only
+# when `parallel = TRUE`, the future.apply package is installed, AND a real
+# (non-sequential) future::plan() with more than one worker is active. Package
+# availability alone used to be the only check, which silently misfired: under
+# future's default *sequential* plan, future_lapply() runs in the very same
+# process plain lapply() would -- so gating the console spinner on "is
+# future.apply installed" (reasoned as "a worker has no console access")
+# suppressed it even when there was no separate worker at all, leaving
+# long-running replicates with no visible feedback and no actual speed-up.
+.use_parallel <- function(parallel) {
+  parallel && requireNamespace("future.apply", quietly = TRUE) &&
+    future::nbrOfWorkers() > 1
+}
+
 # --- 1. Build the null distribution (removal-order randomisation) ----------
 #' Monte Carlo null distribution of robustness curves (random removal order)
 #'
@@ -63,11 +77,15 @@
 #'   project's methodological source for this framework) uses 10,000 for
 #'   final results; lower values (the default 500) are fine for quick
 #'   exploration.
-#' @param parallel If `TRUE` (default) and the `future.apply` package is
-#'   installed, replicates run in parallel across whatever backend was set
-#'   with `future::plan()` (e.g. `future::plan(future::multisession)`).
-#'   Falls back to sequential `lapply()` if `future.apply` isn't installed,
-#'   with no error.
+#' @param parallel If `TRUE` (default), the `future.apply` package is
+#'   installed, AND a non-sequential backend has actually been set with
+#'   `future::plan()` (e.g. `future::plan(future::multisession)`), replicates
+#'   run in parallel across that backend. Installing `future.apply` alone
+#'   isn't enough -- without an explicit `future::plan()` call, replicates
+#'   run sequentially via plain `lapply()` regardless of this argument, with
+#'   the console progress indicator shown (see `.console_progress()`'s
+#'   notes): a `future.apply` worker only lacks console access once a real,
+#'   separate worker process exists.
 #' @param seed Optional integer passed to `set.seed()` for reproducibility.
 #' @param ... Forwarded as-is to every internal [robustness()] call (e.g.
 #'   `indicators=`, `exclude=`, `keep=`, `custom=`, `directed=`,
@@ -90,7 +108,7 @@
 #' @export
 robustness_null_removal <- function(g, n_reps = 500, parallel = TRUE, seed = NULL, ...) {
   if (!is.null(seed)) set.seed(seed)
-  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
+  use_parallel <- .use_parallel(parallel)
 
   run_one <- function(i) {
     ids <- random_failures(g)
@@ -162,7 +180,7 @@ robustness_null_structural <- function(g, attack_fn, n_reps = 500, rewire_niter 
                                         parallel = TRUE, seed = NULL, ...) {
   if (!is.null(seed)) set.seed(seed)
   if (is.null(rewire_niter)) rewire_niter <- 10 * ecount(g)
-  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
+  use_parallel <- .use_parallel(parallel)
 
   # Weights are stripped by design (see Details) -- robustness()'s own
   # "weights_as has no effect on an unweighted graph" warning would otherwise
@@ -244,7 +262,7 @@ edge_robustness_null_removal <- function(g, n_reps = 500, on_parallel = c("colla
   # otherwise re-check it separately, doubling that noise again).
   g <- .prepare_edge_graph(g, on_parallel = on_parallel)
   if (!is.null(seed)) set.seed(seed)
-  use_parallel <- parallel && requireNamespace("future.apply", quietly = TRUE)
+  use_parallel <- .use_parallel(parallel)
 
   run_one <- function(i) {
     ids <- random_edge_failures(g)
