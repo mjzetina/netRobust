@@ -4,16 +4,19 @@
 \alias{robustness_index_null}
 \title{Null-distribution R-index (mean across replicates)}
 \usage{
-robustness_index_null(null_df, index = "GC")
+robustness_index_null(null_df, index = NULL)
 }
 \arguments{
 \item{null_df}{Output of \code{\link[=robustness_null_removal]{robustness_null_removal()}} or
 \code{\link[=robustness_null_structural]{robustness_null_structural()}} (wide format, with a \code{rep} column).}
 
-\item{index}{Name of the indicator column to summarise (default \code{"GC"}).}
+\item{index}{Character vector of indicator column name(s) to summarise.
+\code{NULL} (default) uses every indicator column present in \code{null_df}.}
 }
 \value{
-A single numeric value: the mean R-index across replicates.
+A single numeric value (the mean R-index across replicates) when
+\code{index} resolves to exactly one indicator; a named numeric vector, one
+entry per indicator, otherwise.
 }
 \description{
 Computes \code{\link[=robustness_index]{robustness_index()}} separately for each replicate in a null

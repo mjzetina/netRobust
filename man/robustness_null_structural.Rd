@@ -28,7 +28,9 @@ wrapper like \code{function(g) attack_by_degree(g, mode = "in")}.}
 \item{rewire_niter}{Number of double-edge-swap trials passed to
 \code{igraph::keeping_degseq(niter = )}. \code{NULL} (default) uses \code{10 * ecount(g)}, a common rule of thumb for adequately randomising a graph.}
 
-\item{parallel, seed}{As in \code{\link[=robustness_null_removal]{robustness_null_removal()}}.}
+\item{parallel, seed}{As in \code{\link[=robustness_null_removal]{robustness_null_removal()}} -- see its
+Performance section for guidance on large networks (same cost profile
+here: one full curve per replicate).}
 
 \item{...}{Forwarded to every internal \code{\link[=robustness]{robustness()}} call -- must match
 the settings used for the observed curve you're comparing against (see

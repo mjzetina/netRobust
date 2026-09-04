@@ -28,18 +28,19 @@ devtools::install_github("mjzetina/netRobust")
 library(netRobust)
 library(igraph)
 
-g <- make_graph("Zachary")            # Zachary's Karate Club, 34 nodes
+data(karate)                          # Zachary's Karate Club, 34 nodes -- see ?karate
+g <- karate
 
 r <- random_failures(g)               # random removal order
 d <- attack_by_degree(g)              # remove highest-degree nodes first
 
-failure <- robustness(g, ids = r, keep = c("GC", "APL", "Connectivity"))
-attack  <- robustness(g, ids = d, keep = c("GC", "APL", "Connectivity"))
+failure <- robustness(g, ids = r, keep = c("giant_component_size", "mean_distance", "connectivity"))
+attack  <- robustness(g, ids = d, keep = c("giant_component_size", "mean_distance", "connectivity"))
 
 # Is the attack significantly worse than random failure, overall?
 null_dist <- robustness_null_removal(g, n_reps = 200, seed = 1,
-                                      keep = c("GC", "APL", "Connectivity"))
-compare_robustness_index_to_null(attack, null_dist, index = "GC")
+                                      keep = c("giant_component_size", "mean_distance", "connectivity"))
+compare_robustness_index_to_null(attack, null_dist, index = "giant_component_size")
 ```
 
 ## Learn more

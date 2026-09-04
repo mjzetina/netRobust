@@ -16,11 +16,11 @@ that ARE directed -- igraph ignores this argument automatically on
 undirected graphs, so it's safe to leave at its auto-detected default.}
 
 \item{component_mode}{\code{"weak"} (ignore direction) or \code{"strong"} (mutual
-reachability required) for the \code{GC} indicator. Only relevant for
+reachability required) for the \code{giant_component_size} indicator. Only relevant for
 directed graphs; ignored on undirected ones.}
 
 \item{weight_attr}{Name of an edge attribute to use as weights for
-Diameter/APL, or \code{NA} (default) for unweighted hop counts.
+diameter/mean_distance, or \code{NA} (default) for unweighted hop counts.
 Deliberately an attribute name, not a numeric vector: these indicator
 functions get called on the network as it shrinks during removal, and
 a static numeric vector sized for the original graph would misalign
@@ -32,9 +32,9 @@ expected by \code{\link[=robustness]{robustness()}}'s \verb{indicators=} argumen
 }
 \description{
 Builds the named list of \verb{function(graph) -> scalar} indicators used by
-\code{\link[=robustness]{robustness()}} when \code{indicators = NULL}: Diameter, GC (giant component
-size), APL (average path length), Density, Centralization, Clustering,
-and Homophyly.
+\code{\link[=robustness]{robustness()}} when \code{indicators = NULL}: diameter, giant_component_size,
+mean_distance, edge_density, degree_centralization, clustering, and
+degree_assortativity.
 }
 \seealso{
 \code{\link[=robustness]{robustness()}}, \code{\link[=optional_robustness_indicators]{optional_robustness_indicators()}}
