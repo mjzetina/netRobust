@@ -5,7 +5,8 @@ Authors@R:
     person("Manuel J.", "Zetina-Rejon", , "mjzetina@gmail.com", role = c("aut", "cre"))
 Description: Simulates and compares network robustness to random node
     failures and targeted attacks (by degree, betweenness, closeness,
-    eigenvector centrality, and PageRank), extending the approach of
+    eigenvector centrality, PageRank, and Kleinberg's HITS hub/authority
+    scores), extending the approach of
     Albert, Jeong & Barabasi (2000) <doi:10.1038/35019019>. Includes a
     Monte Carlo framework for testing whether an attack scenario is
     statistically more damaging than random failure, and utilities for

@@ -157,7 +157,7 @@ the `attack_by_*()` functions default to `directed = NULL`, which
 auto-detects from `is_directed(g)`; pass `directed =` explicitly only to
 override that.
 
-The betweenness/closeness/eigenvector/PageRank attacks take a parallel
+The betweenness/closeness/eigenvector/PageRank/HITS attacks take a parallel
 `weights_as = c("distance", "strength")` argument for *weighted*
 networks, telling netRobust how to interpret an edge weight: as a
 **distance** (bigger weight = farther apart, used as-is) or as a
