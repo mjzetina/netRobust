@@ -121,10 +121,10 @@ John A (the club president, degree 17) and Mr Hi (the instructor, degree
 16) are removed first -- unsurprising, since the whole club revolved
 around these two long before it split around them. Both return the same
 shape: a named integer vector, first element = first vertex removed.
-Four more targeted-attack criteria exist -- `attack_by_betweenness()`,
-`attack_by_closeness()`, `attack_by_eigenvector()`, and
-`attack_by_pagerank()` -- with the same `function(g) -> removal order`
-contract.
+Five more targeted-attack criteria exist -- `attack_by_betweenness()`,
+`attack_by_closeness()`, `attack_by_eigenvector()`, `attack_by_pagerank()`,
+and `attack_by_hits()` (Kleinberg's hub or authority scores, for directed
+networks) -- with the same `function(g) -> removal order` contract.
 
 ## A note on direction and weights
 
