@@ -160,10 +160,15 @@ override that.
 The betweenness/closeness/eigenvector/PageRank/HITS attacks take a parallel
 `weights_as = c("distance", "strength")` argument for *weighted*
 networks, telling netRobust how to interpret an edge weight: as a
-**distance** (bigger weight = farther apart, used as-is) or as a
-**strength** (bigger weight = closer/stronger tie, inverted before
-being used as a distance). The Karate Club's weights are interaction
-strengths, so this actually matters here:
+**distance** (bigger weight = farther apart) or as a **strength**
+(bigger weight = closer/stronger tie). Each measure has a native
+reading and inverts the weights (`1 / weight`) only when asked for the
+other one: shortest-path measures (betweenness, closeness) read weights
+as distances, so `"strength"` inverts them; influence measures
+(eigenvector, PageRank, HITS) read weights as strengths, so
+`"distance"` inverts them. With `weights_as = NULL` (the default) each
+measure uses its native reading. The Karate Club's weights are
+interaction strengths, so this actually matters here:
 
 ```{r}
 b_strength <- attack_by_betweenness(g, weights_as = "strength")
