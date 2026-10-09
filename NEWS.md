@@ -1,5 +1,15 @@
 # netRobust 0.1.0.9000
 
+## New features
+
+* `attack_by_hits()` removes vertices in decreasing order of Kleinberg's HITS
+  hub score, authority score, or their product (`which = "hub"`,
+  `"authority"`, `"product"`), via `igraph::hits_scores()`. Weights are used
+  as strength by default and follow the usual `weights` / `weights_as`
+  conventions; `weights = NA` forces unweighted HITS on a weighted graph.
+  Ties (common on near-acyclic food webs, where many scores are exactly zero)
+  are broken deterministically. netRobust now requires igraph >= 2.1.0.
+
 ## Bug fixes
 
 * The optional `radius` indicator no longer silently uses a graph's `weight`

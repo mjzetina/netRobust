@@ -19,7 +19,7 @@ Depends:
 Imports:
     dplyr,
     ggplot2,
-    igraph,
+    igraph (>= 2.1.0),
     stats,
     tidyr,
     utils
