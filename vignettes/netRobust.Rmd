@@ -129,11 +129,13 @@ networks) -- with the same `function(g) -> removal order` contract.
 ## A note on direction and weights
 
 On a directed graph, "degree" is ambiguous: a vertex can have many
-incoming connections and few outgoing ones, or vice versa. Every
-`attack_by_*()` function exposes `mode = c("all", "out", "in")` (ignored
-on undirected graphs, like the Karate Club above) to control which one
-drives the attack. To see why this matters, take a tiny directed toy
-graph with one "out-hub" and one "in-hub":
+incoming connections and few outgoing ones, or vice versa.
+`attack_by_degree()` and `attack_by_closeness()` expose
+`mode = c("all", "out", "in")` (ignored on undirected graphs, like the
+Karate Club above) to control which one drives the attack; the other
+attacks follow edge direction as their own measure defines it (e.g.
+hub vs. authority in `attack_by_hits()`). To see why this matters, take
+a tiny directed toy graph with one "out-hub" and one "in-hub":
 
 ```{r}
 toy <- graph_from_literal(A -+ B, A -+ C, A -+ D, B -+ D, C -+ D, E -+ D)
