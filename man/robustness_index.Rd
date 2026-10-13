@@ -29,14 +29,38 @@ vector, one entry per indicator, otherwise.
 Generalises the R-index of Schneider, Moreira, Andrade, Havlin & Herrmann
 (2011) \url{doi:10.1073/pnas.1009440108} -- originally defined for the giant
 component -- to any indicator column: the mean of an indicator's curve
-across the removal sequence, normalised to its intact-network value.
+over every removal step, normalised to its intact-network value.
 }
 \details{
-\deqn{R = \frac{1}{N}\sum_{Q=1}^{N} \frac{X(Q)}{X(0)}}{R = mean(X(Q) / X(0))}
+\deqn{R = \frac{1}{N}\sum_{Q=1}^{N} \frac{X(Q)}{X(0)}}{R = (1/N) * sum_{Q=1..N} X(Q) / X(0)}
 
 where \eqn{X(Q)}{X(Q)} is the indicator's value after \eqn{Q}{Q} vertices
-have been removed, \eqn{X(0)}{X(0)} is its intact-network value, and
-\eqn{N}{N} is the number of removal steps.
+(or edges, for \code{\link[=edge_robustness]{edge_robustness()}} curves) have been removed,
+\eqn{X(0)}{X(0)} is its intact-network value, and \eqn{N}{N} is the
+number of removal steps, i.e. the number of vertices (or edges). As in
+Schneider et al.'s Eq. 1, the sum runs from the first removal to the
+empty network (\eqn{Q = N}{Q = N}); the intact network enters only as
+the normaliser \eqn{X(0)}{X(0)}.
+
+\strong{Relation to Schneider et al. (2011).} Their \eqn{s(Q)}{s(Q)} is the
+giant component as a fraction of the \emph{original} number of vertices
+\eqn{N}{N}; here every indicator is divided by its own intact value
+\eqn{X(0)}{X(0)}, which is what makes the index applicable to any
+indicator. For \code{giant_component_size} the two coincide whenever the
+intact network is connected (\eqn{X(0) = N}{X(0) = N}), and then \code{R}
+reproduces their bounds: \eqn{(N-1)/N^2}{(N-1)/N^2} for a star attacked
+at its hub (about \eqn{1/N}{1/N}) and \eqn{(N-1)/(2N)}{(N-1)/(2N)} for a
+complete graph (about 0.5). If the intact network is already fragmented,
+\code{R} measures the giant component relative to its own initial size.
+
+\strong{Undefined steps.} Size indicators (\code{giant_component_size},
+\code{connectivity}) are 0 on the empty network and defined at every step.
+Others (e.g. \code{mean_distance}, \code{clustering}, \code{degree_assortativity})
+become undefined (\code{NaN}/\code{NA}) once too little of the network is left,
+and always on the empty network; those steps are left out, so \code{R} is
+then the mean over the steps where the indicator is defined. Because the
+number of such steps can differ between removal orders, compare \code{R}
+values of these indicators with that in mind.
 
 \code{R} describes how far an indicator's value, on average across the whole
 removal sequence, sits from its intact-network baseline -- deliberately
