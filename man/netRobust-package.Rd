@@ -15,11 +15,11 @@ statistically more damaging than random failure, and utilities for
 plotting robustness curves with a null-model reference envelope.
 }
 \author{
-\strong{Maintainer}: Manuel J. Zetina-Rejon \email{mjzetina@gmail.com}
+\strong{Maintainer}: Manuel J. Zetina-Rejón \email{mjzetina@gmail.com}
 
 Authors:
 \itemize{
-  \item Manuel J. Zetina-Rejon \email{mjzetina@gmail.com}
+  \item Manuel J. Zetina-Rejón \email{mjzetina@gmail.com}
 }
 
 }
