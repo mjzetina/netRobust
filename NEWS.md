@@ -1,5 +1,36 @@
 # netRobust 0.2.0.9000
 
+These changes will be released as netRobust 0.3.0.
+
+## Breaking changes
+
+* `robustness_index()` now follows Eq. 1 of Schneider et al. (2011) exactly:
+  it averages X(Q)/X(0) over Q = 1..N, from the first removal to the empty
+  network, instead of over Q = 0..N-1. The previous version added exactly
+  1/N to the giant-component R-index (e.g. 0.19 instead of the analytic 0.09
+  for a 10-vertex star; 0.55 instead of 0.45 for a 10-vertex complete graph).
+  **All R-index values change**, and so do the outputs of
+  `robustness_index_null()`, `compare_robustness()`,
+  `compare_robustness_index_to_null()` and `plot_r_index_null()`. For
+  indicators defined at every step (e.g. `giant_component_size`,
+  `connectivity`) observed and null values shift by the same amount, so
+  p-values are unchanged; for indicators with undefined steps (e.g.
+  `mean_distance`, `clustering`) p-values can change slightly. Re-run
+  analyses whose R-index values are reported.
+* `robustness()` and `edge_robustness()` now return the full curve, from the
+  intact network to the empty one (one row more than before), and the step
+  column is renamed from `N` (where `N = 1` meant nothing removed) to
+  `n_removed` (`0` = intact network), matching `knockout_robustness()`.
+  `summarise_null()` and `compare_to_null()` use `n_removed` too. Curves
+  computed with earlier versions must be recomputed; `robustness_index()`
+  stops with a clear message if given one.
+
+## Bug fixes
+
+* `plot_robustness()`'s x axis, labelled "Number of removed nodes", was off
+  by one (it plotted `N`, which started at 1 for the intact network). It now
+  plots `n_removed`.
+
 ## New features
 
 * Every centrality-based attack -- `attack_by_degree()`,
