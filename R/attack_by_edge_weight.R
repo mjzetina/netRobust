@@ -7,6 +7,11 @@
 #' *is* the criterion, so `g` must be weighted (or you must supply
 #' `weights=` explicitly).
 #'
+#' Unlike the other `attack_by_*()` functions, this one has no
+#' `recalculate` option: an edge's weight does not change when other edges
+#' are removed, so a recalculated attack would always reproduce this static
+#' order (see [recalculated_attacks]).
+#'
 #' @param g An `igraph` object.
 #' @param weights Optional explicit numeric vector of edge weights, one per
 #'   edge *after* any parallel-edge collapse (see `on_parallel`). If `NULL`

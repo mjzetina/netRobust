@@ -52,6 +52,12 @@ the most important ties first by default (\code{decreasing = TRUE}). Unlike
 \emph{is} the criterion, so \code{g} must be weighted (or you must supply
 \verb{weights=} explicitly).
 }
+\details{
+Unlike the other \verb{attack_by_*()} functions, this one has no
+\code{recalculate} option: an edge's weight does not change when other edges
+are removed, so a recalculated attack would always reproduce this static
+order (see \link{recalculated_attacks}).
+}
 \seealso{
 \code{\link[=edge_removal_order]{edge_removal_order()}}, \code{\link[=resolve_weights]{resolve_weights()}},
 \code{\link[=random_edge_failures]{random_edge_failures()}}, \code{\link[=attack_by_edge_betweenness]{attack_by_edge_betweenness()}},

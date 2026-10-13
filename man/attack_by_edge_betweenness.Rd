@@ -8,7 +8,8 @@ attack_by_edge_betweenness(
   g,
   weights = NULL,
   weights_as = NULL,
-  on_parallel = c("collapse", "error")
+  on_parallel = c("collapse", "error"),
+  recalculate = FALSE
 )
 }
 \arguments{
@@ -29,6 +30,12 @@ higher value meaning a stronger tie).}
 the same pair of vertices). \code{"collapse"} (default) merges them via
 \code{igraph::simplify()}, summing weights if any, with a warning.
 \code{"error"} stops instead. See \code{.prepare_edge_graph()}.}
+
+\item{recalculate}{Logical. \code{FALSE} (default) ranks edges once, on the
+intact network (static attack). \code{TRUE} recomputes edge betweenness on
+the remaining network after every edge removal (adaptive attack); see
+\link{recalculated_attacks} for details and computational cost (roughly
+O(m^2 n) for a graph with \emph{n} vertices and \emph{m} edges).}
 }
 \value{
 A named integer vector in removal order, as produced by

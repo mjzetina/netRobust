@@ -120,3 +120,32 @@ test_that("recalculate must be a single TRUE/FALSE", {
   expect_error(attack_by_degree(g_pq, recalculate = NA), "TRUE or FALSE")
   expect_error(attack_by_pagerank(g_pq, recalculate = "yes"), "TRUE or FALSE")
 })
+
+manual_edge_recalc <- function(g) {
+  g <- netRobust:::.prepare_edge_graph(g)
+  out <- character(0)
+  while (ecount(g) > 0) {
+    top <- names(attack_by_edge_betweenness(g))[1]
+    out <- c(out, top)
+    g <- delete_edges(g, top)
+  }
+  out
+}
+
+test_that("recalculated edge betweenness matches a step-by-step reference", {
+  data(karate, package = "netRobust", envir = environment())
+  r <- attack_by_edge_betweenness(karate, recalculate = TRUE)
+  expect_equal(names(r), manual_edge_recalc(karate))
+  expect_setequal(unname(r), seq_len(ecount(karate)))
+  expect_false(identical(r, attack_by_edge_betweenness(karate)))
+  expect_equal(nrow(edge_robustness(karate, r, keep = "giant_component_size")),
+               nrow(edge_robustness(karate, attack_by_edge_betweenness(karate),
+                                    keep = "giant_component_size")))
+})
+
+test_that("recalculated edge betweenness honours an explicit weights vector", {
+  w <- E(g_dir)$weight
+  g_nw <- delete_edge_attr(g_dir, "weight")
+  expect_identical(attack_by_edge_betweenness(g_nw, weights = w, recalculate = TRUE),
+                   attack_by_edge_betweenness(g_dir, recalculate = TRUE))
+})
