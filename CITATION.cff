@@ -1,0 +1,65 @@
+cff-version: 1.2.0
+message: "If you use netRobust, please cite it using the metadata below."
+type: software
+title: "netRobust: Network Robustness Under Random Failures and Targeted Attacks"
+version: 0.1.0.9000
+license: MIT
+repository-code: "https://github.com/mjzetina/netRobust"
+authors:
+  - family-names: "Zetina-Rejón"
+    given-names: "Manuel J."
+    email: "mzetina@ipn.mx"
+    orcid: "https://orcid.org/0000-0002-7181-9828"
+    affiliation: "Instituto Politécnico Nacional - Centro Interdisciplinario de Ciencias Marinas: La Paz, BCS, México"
+abstract: >-
+  An R package that simulates and compares network robustness to random
+  node failures and targeted attacks, extending the approach of Albert,
+  Jeong & Barabási (2000) and generalising the R-index of Schneider et al.
+  (2011) to any network indicator. Includes node removal, edge removal,
+  isolated knock-out and Shapley-value node importance, with a Monte Carlo
+  null-model framework for testing whether an attack is significantly more
+  damaging than random failure.
+keywords:
+  - network robustness
+  - targeted attacks
+  - random failures
+  - R-index
+  - food webs
+  - igraph
+  - R
+references:
+  - type: article
+    title: "Error and attack tolerance of complex networks"
+    authors:
+      - family-names: "Albert"
+        given-names: "Réka"
+      - family-names: "Jeong"
+        given-names: "Hawoong"
+      - family-names: "Barabási"
+        given-names: "Albert-László"
+    journal: "Nature"
+    volume: 406
+    start: 378
+    end: 382
+    year: 2000
+    doi: "10.1038/35019019"
+  - type: article
+    title: "Mitigation of malicious attacks on networks"
+    authors:
+      - family-names: "Schneider"
+        given-names: "Christian M."
+      - family-names: "Moreira"
+        given-names: "André A."
+      - family-names: "Andrade"
+        given-names: "José S."
+      - family-names: "Havlin"
+        given-names: "Shlomo"
+      - family-names: "Herrmann"
+        given-names: "Hans J."
+    journal: "Proceedings of the National Academy of Sciences"
+    volume: 108
+    issue: 10
+    start: 3838
+    end: 3841
+    year: 2011
+    doi: "10.1073/pnas.1009440108"
