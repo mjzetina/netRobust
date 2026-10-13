@@ -1,5 +1,23 @@
 # netRobust 0.2.0.9000
 
+## New features
+
+* Every centrality-based attack -- `attack_by_degree()`,
+  `attack_by_betweenness()`, `attack_by_closeness()`,
+  `attack_by_eigenvector()`, `attack_by_pagerank()`, `attack_by_hits()` and
+  `attack_by_edge_betweenness()` -- gains `recalculate = FALSE`. With `TRUE`
+  the centrality is recomputed on the remaining network after every removal
+  (an adaptive attack, Holme et al. 2002), as in NetworkExtinction,
+  `bipartite::second.extinct(method = "degree")` and NetSwan. The output has
+  the same format as the static order, so it works unchanged in
+  `robustness()`, `edge_robustness()` and `robustness_null_structural()`.
+  See `?recalculated_attacks` for the computational cost and for why a
+  recalculated HITS attack needs `set.seed()` to be reproducible.
+  `attack_by_edge_weight()` has no such option, since edge weights do not
+  change as other edges are removed.
+
+## Citation
+
 * `citation("netRobust")`, the README and `CITATION.cff` now give the Zenodo
   DOI of the 0.2.0 release (10.5281/zenodo.23330079).
 
