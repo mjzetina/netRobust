@@ -1,0 +1,16 @@
+bibentry(
+  bibtype = "Manual",
+  title = "{netRobust}: Network Robustness Under Random Failures and Targeted Attacks",
+  author = person("Manuel J.", "Zetina-Rejón",
+                  comment = c(ORCID = "0000-0002-7181-9828")),
+  year = "2026",
+  note = "R package version 0.2.0",
+  publisher = "Zenodo",
+  doi = "10.5281/zenodo.23330079",
+  url = "https://github.com/mjzetina/netRobust",
+  textVersion = paste(
+    "Zetina-Rejón, M. J. (2026). netRobust: Network Robustness Under",
+    "Random Failures and Targeted Attacks (Version 0.2.0) [Computer software].",
+    "Zenodo. https://doi.org/10.5281/zenodo.23330079"
+  )
+)
