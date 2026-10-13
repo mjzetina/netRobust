@@ -4,6 +4,14 @@ type: software
 title: "netRobust: Network Robustness Under Random Failures and Targeted Attacks"
 version: 0.2.0
 date-released: "2026-10-12"
+doi: 10.5281/zenodo.23330078
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23330078
+    description: "Concept DOI: all versions of netRobust (resolves to the latest)"
+  - type: doi
+    value: 10.5281/zenodo.23330079
+    description: "Version DOI: netRobust 0.2.0"
 license: MIT
 repository-code: "https://github.com/mjzetina/netRobust"
 authors:
