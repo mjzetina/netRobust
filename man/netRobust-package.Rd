@@ -14,12 +14,20 @@ Monte Carlo framework for testing whether an attack scenario is
 statistically more damaging than random failure, and utilities for
 plotting robustness curves with a null-model reference envelope.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/mjzetina/netRobust}
+  \item Report bugs at \url{https://github.com/mjzetina/netRobust/issues}
+}
+
+}
 \author{
-\strong{Maintainer}: Manuel J. Zetina-Rejón \email{mjzetina@gmail.com}
+\strong{Maintainer}: Manuel J. Zetina-Rejón \email{mjzetina@gmail.com} (\href{https://orcid.org/0000-0002-7181-9828}{ORCID})
 
 Authors:
 \itemize{
-  \item Manuel J. Zetina-Rejón \email{mjzetina@gmail.com}
+  \item Manuel J. Zetina-Rejón \email{mjzetina@gmail.com} (\href{https://orcid.org/0000-0002-7181-9828}{ORCID})
 }
 
 }

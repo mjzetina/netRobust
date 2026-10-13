@@ -2,7 +2,8 @@ Package: netRobust
 Title: Network Robustness Under Random Failures and Targeted Attacks
 Version: 0.1.0.9000
 Authors@R:
-    person("Manuel J.", "Zetina-Rejón", , "mjzetina@gmail.com", role = c("aut", "cre"))
+    person("Manuel J.", "Zetina-Rejón", , "mjzetina@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-7181-9828"))
 Description: Simulates and compares network robustness to random node
     failures and targeted attacks (by degree, betweenness, closeness,
     eigenvector centrality, PageRank, and Kleinberg's HITS hub/authority
@@ -12,6 +13,8 @@ Description: Simulates and compares network robustness to random node
     statistically more damaging than random failure, and utilities for
     plotting robustness curves with a null-model reference envelope.
 License: MIT + file LICENSE
+URL: https://github.com/mjzetina/netRobust
+BugReports: https://github.com/mjzetina/netRobust/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.0.0
