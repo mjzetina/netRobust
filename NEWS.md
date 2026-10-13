@@ -27,3 +27,18 @@
   optional indicators are unchanged: `reciprocity` ignores weights, and
   `mean_topological_diversity` intentionally reads `E(g)$weight` (it is an
   entropy of edge weights).
+
+## Documentation
+
+* The vignette no longer claims that every `attack_by_*()` function has a
+  `mode` argument (only `attack_by_degree()` and `attack_by_closeness()` do),
+  and now explains that `weights_as` inverts weights relative to each
+  measure's native reading: distance for betweenness/closeness, strength for
+  eigenvector/PageRank/HITS.
+
+## Citation and package metadata
+
+* New `CITATION.cff`; each GitHub release is archived on Zenodo with a DOI.
+  The README explains how to cite the package.
+* DESCRIPTION gains `URL`, `BugReports` and the maintainer's ORCID; the
+  maintainer address is now the institutional one.
