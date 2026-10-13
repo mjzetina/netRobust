@@ -1,5 +1,7 @@
 # netRobust
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23330078.svg)](https://doi.org/10.5281/zenodo.23330078)
+
 Simulate and compare network robustness to random node failures and
 targeted attacks (by degree, betweenness, closeness, eigenvector
 centrality, PageRank, and Kleinberg's HITS hub/authority scores),
@@ -61,7 +63,15 @@ comparisons (pointwise and whole-curve). Every function also has its own
 If you use netRobust, please cite the software itself. Citation metadata
 is in [`CITATION.cff`](CITATION.cff) (GitHub's "Cite this repository"
 button shows it in APA and BibTeX); each release is archived on Zenodo
-with its own DOI -- cite the DOI of the version you used.
+with its own DOI -- cite the DOI of the version you used. For 0.2.0:
+
+> Zetina-Rejón, M. J. (2026). *netRobust: Network Robustness Under Random
+> Failures and Targeted Attacks* (Version 0.2.0) [Computer software].
+> Zenodo. <https://doi.org/10.5281/zenodo.23330079>
+
+In R, `citation("netRobust")` gives the same reference (with BibTeX). The
+concept DOI <https://doi.org/10.5281/zenodo.23330078> always points to
+the latest version.
 
 netRobust generalises two published methods:
 
