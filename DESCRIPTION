@@ -1,6 +1,6 @@
 Package: netRobust
 Title: Network Robustness Under Random Failures and Targeted Attacks
-Version: 0.2.0
+Version: 0.2.0.9000
 Authors@R:
     person("Manuel J.", "Zetina-Rejón", , "mzetina@ipn.mx", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7181-9828"))

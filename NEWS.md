@@ -1,3 +1,8 @@
+# netRobust 0.2.0.9000
+
+* `citation("netRobust")`, the README and `CITATION.cff` now give the Zenodo
+  DOI of the 0.2.0 release (10.5281/zenodo.23330079).
+
 # netRobust 0.2.0
 
 ## New features
