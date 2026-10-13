@@ -35,6 +35,10 @@
 #'   `closeness()` is a shortest-path-based measure): lower weight means a
 #'   shorter, more traversable path, weights used as-is. Pass `"strength"`
 #'   explicitly to invert them (`1 / weight`) instead.
+#' @param recalculate Logical. `FALSE` (default) ranks vertices once, on the
+#'   intact network (static attack). `TRUE` recomputes closeness on the
+#'   remaining network after every removal (adaptive attack); see
+#'   [recalculated_attacks] for details and computational cost.
 #'
 #' @details
 #' `closeness()` normalises *within each connected component*: instead of
@@ -44,10 +48,11 @@
 #' betweenness). But if the input graph `g` is already fragmented -- e.g. an
 #' isolated species in a diet matrix -- normalisation stops being a single
 #' constant and actually changes the *relative* ranking between vertices in
-#' differently-sized components, so it matters here. (Note: `attack_by_*()`
-#' functions are evaluated once on the full input graph to fix the removal
-#' order up front, per Albert et al. 2000 -- they are not recomputed at each
-#' step as [robustness()] removes nodes.) igraph also emits a warning
+#' differently-sized components, so it matters here. (By default the
+#' removal order is fixed once on the full input graph, per Albert et al.
+#' 2000; with `recalculate = TRUE` closeness is recomputed on the remaining,
+#' increasingly fragmented network at every step, so this component-wise
+#' normalisation applies at every step too.) igraph also emits a warning
 #' whenever it has to do this component-wise calculation, which would flood
 #' the console if `g` is disconnected and this is called across thousands of
 #' Monte Carlo replicates (see [robustness_null_removal()]) -- that warning is
@@ -60,8 +65,18 @@
 #'   [attack_by_eigenvector()], [attack_by_pagerank()]
 #' @export
 attack_by_closeness <- function(g, directed = NULL, mode = c("all", "out", "in"),
-                                 weights = NULL, weights_as = NULL) {
+                                 weights = NULL, weights_as = NULL, recalculate = FALSE) {
   mode_missing <- missing(mode)
+  if (.check_recalculate(recalculate)) {
+    static <- if (mode_missing) {
+      function(gi, w) attack_by_closeness(gi, directed = directed, weights = w,
+                                          weights_as = weights_as)
+    } else {
+      function(gi, w) attack_by_closeness(gi, directed = directed, mode = mode, weights = w,
+                                          weights_as = weights_as)
+    }
+    return(.adaptive_order(g, static, weights = weights))
+  }
   mode <- match.arg(mode)
   if (!is.null(directed)) {
     if (directed && !is_directed(g)) {

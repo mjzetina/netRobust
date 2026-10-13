@@ -8,7 +8,8 @@ attack_by_hits(
   g,
   which = c("hub", "authority", "product"),
   weights = NULL,
-  weights_as = NULL
+  weights_as = NULL,
+  recalculate = FALSE
 )
 }
 \arguments{
@@ -29,6 +30,11 @@ weights used as-is (e.g. a diet fraction), same as
 \code{\link[=attack_by_pagerank]{attack_by_pagerank()}} and \code{\link[=attack_by_eigenvector]{attack_by_eigenvector()}}. Pass
 \code{"distance"} explicitly to invert them (\code{1 / weight}) instead.
 Ignored on unweighted graphs.}
+
+\item{recalculate}{Logical. \code{FALSE} (default) ranks vertices once, on the
+intact network (static attack). \code{TRUE} recomputes the HITS scores on the
+remaining network after every removal (adaptive attack); see
+\link{recalculated_attacks} for details and computational cost.}
 }
 \value{
 A named integer vector in removal order, as produced by

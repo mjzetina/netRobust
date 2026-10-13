@@ -4,7 +4,13 @@
 \alias{attack_by_betweenness}
 \title{Targeted-attack removal order by betweenness centrality}
 \usage{
-attack_by_betweenness(g, directed = NULL, weights = NULL, weights_as = NULL)
+attack_by_betweenness(
+  g,
+  directed = NULL,
+  weights = NULL,
+  weights_as = NULL,
+  recalculate = FALSE
+)
 }
 \arguments{
 \item{g}{An \code{igraph} object.}
@@ -25,6 +31,11 @@ traversable path, weights used as-is. If your weights instead
 represent \emph{interaction strength} (e.g. a diet fraction, a tie
 strength) -- where a \emph{higher} value means a stronger, more relevant
 connection -- pass \code{"strength"} explicitly to invert them (\code{1 / weight}) so strong ties are treated as short/close rather than costly.}
+
+\item{recalculate}{Logical. \code{FALSE} (default) ranks vertices once, on the
+intact network (static attack). \code{TRUE} recomputes betweenness on the
+remaining network after every removal (adaptive attack); see
+\link{recalculated_attacks} for details and computational cost.}
 }
 \value{
 A named integer vector in removal order, as produced by

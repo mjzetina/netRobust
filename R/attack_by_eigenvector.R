@@ -20,6 +20,10 @@
 #'   (`1 / weight`) instead, e.g. to explore the opposite interpretation of
 #'   the same data, mirroring the choice offered in
 #'   [attack_by_betweenness()]. Ignored on unweighted graphs.
+#' @param recalculate Logical. `FALSE` (default) ranks vertices once, on the
+#'   intact network (static attack). `TRUE` recomputes eigenvector centrality on the
+#'   remaining network after every removal (adaptive attack); see
+#'   [recalculated_attacks] for details and computational cost.
 #'
 #' @details
 #' Eigenvector centrality relies on the Perron-Frobenius theorem, which
@@ -41,7 +45,13 @@
 #' @seealso [removal_order()], [attack_by_degree()], [attack_by_betweenness()],
 #'   [attack_by_closeness()], [attack_by_pagerank()]
 #' @export
-attack_by_eigenvector <- function(g, directed = NULL, weights = NULL, weights_as = NULL) {
+attack_by_eigenvector <- function(g, directed = NULL, weights = NULL, weights_as = NULL,
+                                  recalculate = FALSE) {
+  if (.check_recalculate(recalculate)) {
+    static <- function(gi, w) attack_by_eigenvector(gi, directed = directed, weights = w,
+                                                    weights_as = weights_as)
+    return(.adaptive_order(g, static, weights = weights))
+  }
   if (is.null(directed)) {
     directed <- is_directed(g)
   } else if (directed && !is_directed(g)) {

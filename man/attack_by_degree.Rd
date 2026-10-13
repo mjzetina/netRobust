@@ -4,7 +4,12 @@
 \alias{attack_by_degree}
 \title{Targeted-attack removal order by degree centrality}
 \usage{
-attack_by_degree(g, directed = NULL, mode = c("all", "out", "in"))
+attack_by_degree(
+  g,
+  directed = NULL,
+  mode = c("all", "out", "in"),
+  recalculate = FALSE
+)
 }
 \arguments{
 \item{g}{An \code{igraph} object.}
@@ -26,6 +31,11 @@ for directed graphs (ignored otherwise): \code{"out"} ranks by outgoing
 connections (e.g. how many prey a predator consumes), \code{"in"} by
 incoming connections (e.g. how many predators a species feeds), \code{"all"}
 sums both.}
+
+\item{recalculate}{Logical. \code{FALSE} (default) ranks vertices once, on the
+intact network (static attack). \code{TRUE} recomputes degree on the
+remaining network after every removal (adaptive attack); see
+\link{recalculated_attacks} for details and computational cost.}
 }
 \value{
 A named integer vector in removal order, as produced by

@@ -19,6 +19,10 @@
 #'   directly). Pass `"distance"` explicitly to invert them (`1 / weight`)
 #'   instead, to explore the opposite interpretation, mirroring the choice
 #'   in [attack_by_betweenness()] and [attack_by_eigenvector()].
+#' @param recalculate Logical. `FALSE` (default) ranks vertices once, on the
+#'   intact network (static attack). `TRUE` recomputes PageRank on the
+#'   remaining network after every removal (adaptive attack); see
+#'   [recalculated_attacks] for details and computational cost.
 #'
 #' @return A named integer vector in removal order, as produced by
 #'   [removal_order()] -- ready to pass to [robustness()].
@@ -26,7 +30,13 @@
 #' @seealso [removal_order()], [attack_by_degree()], [attack_by_betweenness()],
 #'   [attack_by_closeness()], [attack_by_eigenvector()]
 #' @export
-attack_by_pagerank <- function(g, directed = NULL, weights = NULL, weights_as = NULL) {
+attack_by_pagerank <- function(g, directed = NULL, weights = NULL, weights_as = NULL,
+                               recalculate = FALSE) {
+  if (.check_recalculate(recalculate)) {
+    static <- function(gi, w) attack_by_pagerank(gi, directed = directed, weights = w,
+                                                 weights_as = weights_as)
+    return(.adaptive_order(g, static, weights = weights))
+  }
   if (is.null(directed)) {
     directed <- is_directed(g)
   } else if (directed && !is_directed(g)) {

@@ -4,7 +4,13 @@
 \alias{attack_by_pagerank}
 \title{Targeted-attack removal order by PageRank score}
 \usage{
-attack_by_pagerank(g, directed = NULL, weights = NULL, weights_as = NULL)
+attack_by_pagerank(
+  g,
+  directed = NULL,
+  weights = NULL,
+  weights_as = NULL,
+  recalculate = FALSE
+)
 }
 \arguments{
 \item{g}{An \code{igraph} object.}
@@ -23,6 +29,11 @@ transmitted, weights used as-is (matches most weighted network data
 directly). Pass \code{"distance"} explicitly to invert them (\code{1 / weight})
 instead, to explore the opposite interpretation, mirroring the choice
 in \code{\link[=attack_by_betweenness]{attack_by_betweenness()}} and \code{\link[=attack_by_eigenvector]{attack_by_eigenvector()}}.}
+
+\item{recalculate}{Logical. \code{FALSE} (default) ranks vertices once, on the
+intact network (static attack). \code{TRUE} recomputes PageRank on the
+remaining network after every removal (adaptive attack); see
+\link{recalculated_attacks} for details and computational cost.}
 }
 \value{
 A named integer vector in removal order, as produced by

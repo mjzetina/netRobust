@@ -24,6 +24,10 @@
 #'   connections (e.g. how many prey a predator consumes), `"in"` by
 #'   incoming connections (e.g. how many predators a species feeds), `"all"`
 #'   sums both.
+#' @param recalculate Logical. `FALSE` (default) ranks vertices once, on the
+#'   intact network (static attack). `TRUE` recomputes degree on the
+#'   remaining network after every removal (adaptive attack); see
+#'   [recalculated_attacks] for details and computational cost.
 #'
 #' @return A named integer vector in removal order, as produced by
 #'   [removal_order()] -- ready to pass to [robustness()].
@@ -32,8 +36,17 @@
 #'   [attack_by_closeness()], [attack_by_eigenvector()],
 #'   [attack_by_pagerank()]
 #' @export
-attack_by_degree <- function(g, directed = NULL, mode = c("all", "out", "in")) {
+attack_by_degree <- function(g, directed = NULL, mode = c("all", "out", "in"),
+                             recalculate = FALSE) {
   mode_missing <- missing(mode)
+  if (.check_recalculate(recalculate)) {
+    static <- if (mode_missing) {
+      function(gi, w) attack_by_degree(gi, directed = directed)
+    } else {
+      function(gi, w) attack_by_degree(gi, directed = directed, mode = mode)
+    }
+    return(.adaptive_order(g, static))
+  }
   mode <- match.arg(mode)
   if (!is.null(directed)) {
     if (directed && !is_directed(g)) {

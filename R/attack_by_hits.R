@@ -20,6 +20,10 @@
 #'   [attack_by_pagerank()] and [attack_by_eigenvector()]. Pass
 #'   `"distance"` explicitly to invert them (`1 / weight`) instead.
 #'   Ignored on unweighted graphs.
+#' @param recalculate Logical. `FALSE` (default) ranks vertices once, on the
+#'   intact network (static attack). `TRUE` recomputes the HITS scores on the
+#'   remaining network after every removal (adaptive attack); see
+#'   [recalculated_attacks] for details and computational cost.
 #'
 #' @details
 #' **Orientation.** Hub and authority depend on edge direction. With edges
@@ -82,8 +86,13 @@
 #'   [attack_by_eigenvector()]
 #' @export
 attack_by_hits <- function(g, which = c("hub", "authority", "product"),
-                           weights = NULL, weights_as = NULL) {
+                           weights = NULL, weights_as = NULL, recalculate = FALSE) {
   which <- match.arg(which)
+  if (.check_recalculate(recalculate)) {
+    static <- function(gi, w) attack_by_hits(gi, which = which, weights = w,
+                                             weights_as = weights_as)
+    return(.adaptive_order(g, static, weights = weights))
+  }
   if (!is_directed(g)) {
     warning("g is undirected: hub and authority scores both equal eigenvector ",
             "centrality there; consider attack_by_eigenvector() instead.")

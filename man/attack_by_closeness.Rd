@@ -9,7 +9,8 @@ attack_by_closeness(
   directed = NULL,
   mode = c("all", "out", "in"),
   weights = NULL,
-  weights_as = NULL
+  weights_as = NULL,
+  recalculate = FALSE
 )
 }
 \arguments{
@@ -46,6 +47,11 @@ unlike \code{\link[=attack_by_eigenvector]{attack_by_eigenvector()}}/\code{\link
 \code{closeness()} is a shortest-path-based measure): lower weight means a
 shorter, more traversable path, weights used as-is. Pass \code{"strength"}
 explicitly to invert them (\code{1 / weight}) instead.}
+
+\item{recalculate}{Logical. \code{FALSE} (default) ranks vertices once, on the
+intact network (static attack). \code{TRUE} recomputes closeness on the
+remaining network after every removal (adaptive attack); see
+\link{recalculated_attacks} for details and computational cost.}
 }
 \value{
 A named integer vector in removal order, as produced by
@@ -63,10 +69,11 @@ this reduces to a single global constant and changes nothing (same as
 betweenness). But if the input graph \code{g} is already fragmented -- e.g. an
 isolated species in a diet matrix -- normalisation stops being a single
 constant and actually changes the \emph{relative} ranking between vertices in
-differently-sized components, so it matters here. (Note: \verb{attack_by_*()}
-functions are evaluated once on the full input graph to fix the removal
-order up front, per Albert et al. 2000 -- they are not recomputed at each
-step as \code{\link[=robustness]{robustness()}} removes nodes.) igraph also emits a warning
+differently-sized components, so it matters here. (By default the
+removal order is fixed once on the full input graph, per Albert et al.
+2000; with \code{recalculate = TRUE} closeness is recomputed on the remaining,
+increasingly fragmented network at every step, so this component-wise
+normalisation applies at every step too.) igraph also emits a warning
 whenever it has to do this component-wise calculation, which would flood
 the console if \code{g} is disconnected and this is called across thousands of
 Monte Carlo replicates (see \code{\link[=robustness_null_removal]{robustness_null_removal()}}) -- that warning is

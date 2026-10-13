@@ -4,7 +4,13 @@
 \alias{attack_by_eigenvector}
 \title{Targeted-attack removal order by eigenvector centrality}
 \usage{
-attack_by_eigenvector(g, directed = NULL, weights = NULL, weights_as = NULL)
+attack_by_eigenvector(
+  g,
+  directed = NULL,
+  weights = NULL,
+  weights_as = NULL,
+  recalculate = FALSE
+)
 }
 \arguments{
 \item{g}{An \code{igraph} object.}
@@ -25,6 +31,11 @@ network data directly, e.g. a diet fraction, a tie strength), same as
 (\code{1 / weight}) instead, e.g. to explore the opposite interpretation of
 the same data, mirroring the choice offered in
 \code{\link[=attack_by_betweenness]{attack_by_betweenness()}}. Ignored on unweighted graphs.}
+
+\item{recalculate}{Logical. \code{FALSE} (default) ranks vertices once, on the
+intact network (static attack). \code{TRUE} recomputes eigenvector centrality on the
+remaining network after every removal (adaptive attack); see
+\link{recalculated_attacks} for details and computational cost.}
 }
 \value{
 A named integer vector in removal order, as produced by
