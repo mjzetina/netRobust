@@ -278,10 +278,10 @@ every removal step separately would carry:
 compare_robustness_index_to_null(attack, null_dist, index = "giant_component_size")
 ```
 
-The degree attack's R-index (`0.17`) sits far below the null's mean
-(`0.44`) -- on average across the whole removal sequence, the giant
-component is barely a sixth of its intact size under this attack, versus
-staying near half its size under random loss -- and the empirical
+The degree attack's R-index (`0.14`) sits far below the null's mean
+(`0.40`) -- on average across the whole removal sequence, the giant
+component keeps about a seventh of its intact size under this attack,
+versus about two fifths under random loss -- and the empirical
 p-value is `0`, i.e. none of the 200 random-failure replicates came
 anywhere close. The same comparison, visually -- a histogram of the
 null's R-index values, with the attack's own R-index marked as a dashed
@@ -349,8 +349,8 @@ compare_robustness(scenario_list = list(
 ```
 
 Recalculating makes both attacks more damaging here: the degree attack's
-R-index drops slightly (0.171 to 0.165) and the betweenness attack's
-clearly (0.220 to 0.165). Both betweenness attacks start with Mr Hi and
+R-index drops slightly (0.142 to 0.136) and the betweenness attack's
+clearly (0.190 to 0.136). Both betweenness attacks start with Mr Hi and
 John A, but then the static order -- fixed while both were still present
 -- removes Actor 20 and Actor 32, whereas the recalculated one switches
 to Actor 33, Actor 3 and Actor 2, the most central members of what is
@@ -375,12 +375,12 @@ gc_sig <- sig[sig$Index == "giant_component_size", ]
 head(gc_sig, 6)
 ```
 
-Removing just John A and Mr Hi (`N = 1`-`2`) isn't yet distinguishable
-from random loss (`p = 1`) -- the club tolerates losing any two members,
-even these two, without visibly more damage than chance. The picture
-flips fast: by the third removal `p` drops to `0.05`, and from the
-fourth removal on `p = 0`. Three or four members in, the *identity* of
-who's missing starts to matter far more than random loss ever would.
+Row `n_removed = 0` is the intact network, identical in every scenario
+(`p = 1`). Removing John A alone (`n_removed = 1`) isn't yet
+distinguishable from random loss (`p = 1`), but losing both John A and
+Mr Hi (`n_removed = 2`) already gives `p = 0.05`, and from the third
+removal on `p = 0`. Two or three members in, the *identity* of who's
+missing starts to matter far more than random loss ever would.
 
 ## Removing edges instead of nodes
 
@@ -450,9 +450,10 @@ compare_robustness_index_to_null(eattack_weak, edge_null, index = "giant_compone
 
 A genuine surprise: removing the *strongest* ties first is barely
 different from random edge loss and, per the first test above, not
-significant. Removing the *weakest* ties first, despite scoring worse
-(a lower, more damaging R-index) than betweenness alone, comes out
-significantly *more* damaging than random edge loss in the second test.
+significant. Removing the *weakest* ties first is less damaging than the
+betweenness attack (a higher R-index, 0.618 vs 0.581), yet still comes
+out significantly *more* damaging than random edge loss in the second
+test.
 Strong ties here mostly reinforce connections that already exist through
 other paths; weak ties are more often the only link between two
 otherwise-separate parts of the club -- an edge-level echo of
@@ -653,8 +654,8 @@ struct_null <- robustness_null_structural(g, attack_fn = attack_by_degree,
 compare_robustness_index_to_null(attack, struct_null, index = "giant_component_size")
 ```
 
-The degree attack's observed R-index (`0.17`) sits below the structural
-null's mean (`0.22`) with `p = 0.005`: this specific arrangement of ties
+The degree attack's observed R-index (`0.14`) sits below the structural
+null's mean (`0.19`) with `p = 0.005`: this specific arrangement of ties
 -- not just the fact that a couple of members happen to have high degree
 -- makes the club more vulnerable to a degree-based attack than the
 typical network with the same size and degree sequence would be. This is
