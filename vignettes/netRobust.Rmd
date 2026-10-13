@@ -325,6 +325,40 @@ Every targeted attack scores well below random failure on this network
 connected hubs, is far more vulnerable to targeted attacks than to
 random ones.
 
+### Static or recalculated attacks?
+
+Every attack above ranks the nodes **once**, on the intact network, and
+keeps that order to the end (a *static* attack, as in Albert et al. 2000).
+With `recalculate = TRUE` the centrality is instead recomputed on what is
+left after every removal, so the attack keeps targeting whichever nodes
+have *become* central (a *recalculated* or adaptive attack, Holme et al.
+2002 -- the way NetworkExtinction and `bipartite::second.extinct()` rank
+by degree). The output has the same format, so it drops into
+`robustness()` unchanged:
+
+```{r}
+d_rec <- attack_by_degree(g, recalculate = TRUE)
+b_rec <- attack_by_betweenness(g, recalculate = TRUE)
+
+compare_robustness(scenario_list = list(
+  Degree = attack,
+  Degree_recalculated = robustness(g, ids = d_rec, keep = c("giant_component_size", "mean_distance", "connectivity")),
+  Betweenness = attack_b,
+  Betweenness_recalculated = robustness(g, ids = b_rec, keep = c("giant_component_size", "mean_distance", "connectivity"))
+), index = "giant_component_size")
+```
+
+Recalculating makes both attacks more damaging here: the degree attack's
+R-index drops slightly (0.171 to 0.165) and the betweenness attack's
+clearly (0.220 to 0.165). Both betweenness attacks start with Mr Hi and
+John A, but then the static order -- fixed while both were still present
+-- removes Actor 20 and Actor 32, whereas the recalculated one switches
+to Actor 33, Actor 3 and Actor 2, the most central members of what is
+left. Recalculation costs one
+centrality computation per removal step, which matters most for
+betweenness and closeness on large networks and inside
+`robustness_null_structural()`; see `?recalculated_attacks`.
+
 ## Where along the curve does the difference show up?
 
 `compare_to_null()` answers the pointwise question: at *which* removal
