@@ -69,7 +69,7 @@
 #                attack_by_closeness().
 #
 # OUTPUT
-#   data.frame, one row per removal step (N = 1 .. vcount(g)), with one
+#   data.frame, one row per removal step (n_removed = 0 .. vcount(g)), with one
 #   column per indicator plus connectivity (normalised to the intact graph).
 
 # --- Default indicator set -------------------------------------------------
@@ -447,16 +447,19 @@ optional_robustness_indicators <- function(g = NULL, names = NULL, weight_attr =
 .removal_curve <- function(g, removal_names, indicators, delete_fn) {
   n <- length(removal_names)
   rows <- vector("list", n + 1)
-  rows[[1]] <- c(list(N = 1), .compute_indicator_row(g, indicators))
+  rows[[1]] <- c(list(n_removed = 0L), .compute_indicator_row(g, indicators))
 
   gi <- g
   for (i in seq_len(n)) {
     gi <- delete_fn(gi, removal_names[i])
-    rows[[i + 1]] <- c(list(N = i + 1), .compute_indicator_row(gi, indicators))
+    rows[[i + 1]] <- c(list(n_removed = i), .compute_indicator_row(gi, indicators))
   }
 
+  # Full curve, intact (n_removed = 0) to fully emptied (n_removed = n): the
+  # R-index of Schneider et al. (2011) averages over steps 1..n, including
+  # the empty network (see robustness_index()).
   df <- do.call(rbind.data.frame, rows)
-  df <- df[seq_len(n), ]  # drop the fully-emptied network, matches original behaviour
+  df$n_removed <- as.integer(df$n_removed)
   rownames(df) <- NULL
   df
 }
@@ -580,9 +583,12 @@ list_indicators <- function() {
 #'   invert (`1/weight`) so stronger ties count as closer -- same
 #'   convention as [attack_by_betweenness()]/[attack_by_closeness()].
 #'
-#' @return A `data.frame`, one row per removal step (`N` = 1 ..
-#'   `vcount(g)`), with one column per indicator plus `connectivity`
-#'   (normalised to the intact graph).
+#' @return A `data.frame` with one row per network state, from the intact
+#'   network to the empty one: `n_removed` (number of vertices removed so
+#'   far, `0` = intact network, `vcount(g)` = every vertex removed) and one
+#'   column per indicator. Indicators that are undefined on the remaining
+#'   network (e.g. `mean_distance` once no paths are left, or anything but
+#'   the size indicators on the empty network) are `NaN`/`NA`.
 #'
 #' @section Available indicators:
 #' Default (always computed unless dropped via `exclude=`/`keep=`):

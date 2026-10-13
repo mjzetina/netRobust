@@ -106,7 +106,7 @@
 #'   character(0)`, `n_removed = 0` -- so every group's indicator values sit
 #'   in the same table as the baseline they're implicitly compared against,
 #'   instead of requiring you to look that value up separately (e.g. via
-#'   `robustness()`'s own `N = 1` row, or recomputing it by hand). Never
+#'   `robustness()`'s own `n_removed = 0` row, or recomputing it by hand). Never
 #'   picked up by patterns like `res[which.min(res$giant_component_size),
 #'   ]` -- the intact network's indicator values are never the most
 #'   damaging outcome. Set `FALSE` to get the previous behaviour (one row

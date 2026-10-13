@@ -34,7 +34,7 @@ replicate \eqn{m}{m} and \eqn{M}{M} is the number of replicates
 (\code{n_reps}).
 
 For \code{\link[=robustness_null_removal]{robustness_null_removal()}} specifically (fixed network, only removal
-order randomised), the intact-network value at \code{N = 1} is identical
+order randomised), the intact-network value at \code{n_removed = 0} is identical
 across every replicate, which makes the R-index a linear functional of
 the curve -- so in that one case, \eqn{\bar{R}}{Rbar} happens to equal
 \code{robustness_index()} computed on the mean curve. That equivalence breaks

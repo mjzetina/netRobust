@@ -44,7 +44,7 @@ test_that("output has the static format: original indices named by vertex", {
   expect_type(r, "integer")
   expect_setequal(unname(r), seq_len(vcount(karate)))
   expect_identical(names(r), V(karate)$name[r])
-  expect_equal(nrow(robustness(karate, r, keep = "giant_component_size")), vcount(karate))
+  expect_equal(nrow(robustness(karate, r, keep = "giant_component_size")), vcount(karate) + 1)
   # unnamed graphs get the same node_<i> fallback as removal_order()
   r0 <- attack_by_degree(make_ring(4), recalculate = TRUE)
   expect_identical(names(r0), paste0("node_", r0))
@@ -113,7 +113,7 @@ test_that("recalculated attacks work inside robustness_null_structural()", {
                                     n_reps = 3, parallel = FALSE, seed = 1,
                                     keep = "giant_component_size")
   expect_equal(sort(unique(nul$rep)), 1:3)
-  expect_equal(nrow(nul), 3 * vcount(karate))
+  expect_equal(nrow(nul), 3 * (vcount(karate) + 1))
 })
 
 test_that("recalculate must be a single TRUE/FALSE", {

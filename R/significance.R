@@ -204,7 +204,7 @@ robustness_null_removal <- function(g, n_reps = 500, parallel = TRUE, seed = NUL
 #'   (see Details).
 #'
 #' @return Same shape as [robustness_null_removal()]: a `data.frame` with one
-#'   column per indicator, `N`, and `rep`.
+#'   column per indicator, `n_removed`, and `rep`.
 #'
 #' @seealso [robustness_null_removal()], [summarise_null()],
 #'   [robustness_index_null()]
@@ -459,7 +459,7 @@ compare_knockout_to_null <- function(observed, null_df, index = NULL) {
   out[, c("group_id", "group", "Index", "n_removed", "observed", "null_mean", "p_value")]
 }
 
-# --- 2. Summarise the null into a quantile envelope per N ------------------
+# --- 2. Summarise the null into a quantile envelope per step ---------------
 #' Summarise a null distribution into a quantile envelope
 #'
 #' Collapses the many replicates from [robustness_null_removal()] or
@@ -471,7 +471,7 @@ compare_knockout_to_null <- function(observed, null_df, index = NULL) {
 #'
 #' @param null_df Output of [robustness_null_removal()] or
 #'   [robustness_null_structural()] (wide format, one column per indicator
-#'   plus `N` and `rep`).
+#'   plus `n_removed` and `rep`).
 #' @param probs Named numeric vector of three quantile *levels* (each in
 #'   `[0, 1]`) to compute -- default `c(lower = 0.025, median = 0.5, upper =
 #'   0.975)`, the 2.5th/50th/97.5th percentiles across replicates (a 95%
@@ -485,7 +485,7 @@ compare_knockout_to_null <- function(observed, null_df, index = NULL) {
 #'   "probs")`, which [plot_robustness()] reads to caption the envelope's
 #'   true coverage instead of assuming 95%.
 #'
-#' @return A `data.frame` with columns `Index`, `N`, `mean`, `lower`,
+#' @return A `data.frame` with columns `Index`, `n_removed`, `mean`, `lower`,
 #'   `median`, `upper` -- long format, one row per indicator per removal
 #'   step. `lower`/`median`/`upper` are the quantiles named by `probs=`
 #'   (2.5%/50%/97.5% by default) -- see `probs=` above for what those
@@ -497,11 +497,11 @@ compare_knockout_to_null <- function(observed, null_df, index = NULL) {
 #' @export
 summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper = 0.975)) {
   # Requires: dplyr, tidyr (already used elsewhere in the project)
-  idx_cols <- setdiff(names(null_df), c("N", "rep"))
+  idx_cols <- setdiff(names(null_df), c("n_removed", "rep"))
 
   out <- null_df |>
     tidyr::pivot_longer(cols = tidyr::all_of(idx_cols), names_to = "Index", values_to = "Value") |>
-    dplyr::group_by(Index, N) |>
+    dplyr::group_by(Index, n_removed) |>
     dplyr::summarise(
       mean   = mean(Value, na.rm = TRUE),
       lower  = stats::quantile(Value, probs["lower"],  na.rm = TRUE),
@@ -533,13 +533,13 @@ summarise_null <- function(null_df, probs = c(lower = 0.025, median = 0.5, upper
 #'   doesn't, this errors rather than silently comparing only the columns
 #'   that happen to match.
 #'
-#' @return A `data.frame` with columns `N`, `Index`, `observed`, `p_value`,
+#' @return A `data.frame` with columns `n_removed`, `Index`, `observed`, `p_value`,
 #'   one row per indicator per removal step.
 #'
 #' @seealso [robustness_null_removal()], [robustness()]
 #' @export
 compare_to_null <- function(observed, null_df) {
-  idx_cols <- setdiff(names(observed), "N")
+  idx_cols <- setdiff(names(observed), "n_removed")
   missing_cols <- setdiff(idx_cols, names(null_df))
   if (length(missing_cols) > 0) {
     stop("observed has indicator(s) not present in null_df: ",
@@ -552,14 +552,14 @@ compare_to_null <- function(observed, null_df) {
 
   out <- lapply(idx_cols, function(col) {
     p <- vapply(seq_len(nrow(observed)), function(i) {
-      n_i <- observed$N[i]
-      null_vals <- null_df[[col]][null_df$N == n_i]
+      n_i <- observed$n_removed[i]
+      null_vals <- null_df[[col]][null_df$n_removed == n_i]
       obs_val <- observed[[col]][i]
       if (length(null_vals) == 0 || is.na(obs_val)) return(NA_real_)
       center <- mean(null_vals, na.rm = TRUE)
       mean(abs(null_vals - center) >= abs(obs_val - center), na.rm = TRUE)
     }, numeric(1))
-    data.frame(N = observed$N, Index = col, observed = observed[[col]], p_value = p)
+    data.frame(n_removed = observed$n_removed, Index = col, observed = observed[[col]], p_value = p)
   })
   do.call(rbind, out)
 }
@@ -616,15 +616,21 @@ robustness_index <- function(res, index = NULL) {
          "the list() passed to compare_robustness() instead of after it.",
          call. = FALSE)
   }
-  if (is.null(index)) index <- setdiff(names(res), "N")
+  if (!("n_removed" %in% names(res))) {
+    stop("res has no n_removed column. Curves from netRobust < 0.3.0 (with an ",
+         "`N` column instead) must be recomputed with robustness()/",
+         "edge_robustness().", call. = FALSE)
+  }
+  if (is.null(index)) index <- setdiff(names(res), "n_removed")
   unknown <- setdiff(index, names(res))
   if (length(unknown) > 0) {
     stop("index has name(s) not found in res: ", paste(unknown, collapse = ", "),
-         ". Available columns: ", paste(setdiff(names(res), "N"), collapse = ", "),
+         ". Available columns: ", paste(setdiff(names(res), "n_removed"), collapse = ", "),
          ".", call. = FALSE)
   }
+  steps <- res$n_removed < max(res$n_removed)
   result <- vapply(index, function(ix) {
-    vals <- res[[ix]]
+    vals <- res[[ix]][steps]
     mean(vals / vals[1], na.rm = TRUE)
   }, numeric(1))
   if (length(result) == 1) unname(result) else result
@@ -658,7 +664,7 @@ compare_robustness <- function(scenario_list, index = NULL) {
              "e.g. index= accidentally placed inside the list() instead of ",
              "after it.", call. = FALSE)
       }
-      setdiff(names(x), "N")
+      setdiff(names(x), "n_removed")
     })
     index <- Reduce(intersect, cols_per_scenario)
     if (length(index) == 0) {
@@ -712,7 +718,7 @@ compare_robustness <- function(scenario_list, index = NULL) {
          "robustness_null_structural() instead (the one you'd pass TO ",
          "summarise_null(), not what it returns).", call. = FALSE)
   }
-  idx_cols <- setdiff(names(null_df), c("N", "rep"))
+  idx_cols <- setdiff(names(null_df), c("n_removed", "rep"))
   if (is.null(index)) index <- idx_cols
   unknown <- setdiff(index, idx_cols)
   if (length(unknown) > 0) {
@@ -752,7 +758,7 @@ compare_robustness <- function(scenario_list, index = NULL) {
 #'
 #' @details
 #' For [robustness_null_removal()] specifically (fixed network, only removal
-#' order randomised), the intact-network value at `N = 1` is identical
+#' order randomised), the intact-network value at `n_removed = 0` is identical
 #' across every replicate, which makes the R-index a linear functional of
 #' the curve -- so in that one case, \eqn{\bar{R}}{Rbar} happens to equal
 #' `robustness_index()` computed on the mean curve. That equivalence breaks
@@ -830,7 +836,7 @@ robustness_index_null <- function(null_df, index = NULL) {
 #'   [compare_to_null()], [plot_r_index_null()]
 #' @export
 compare_robustness_index_to_null <- function(observed, null_df, index = NULL) {
-  if (is.null(index)) index <- setdiff(names(observed), "N")
+  if (is.null(index)) index <- setdiff(names(observed), "n_removed")
   null_mat <- .robustness_index_per_replicate(null_df, index = index)
 
   out <- lapply(index, function(ix) {

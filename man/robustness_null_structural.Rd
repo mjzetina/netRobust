@@ -39,7 +39,7 @@ the settings used for the observed curve you're comparing against (see
 }
 \value{
 Same shape as \code{\link[=robustness_null_removal]{robustness_null_removal()}}: a \code{data.frame} with one
-column per indicator, \code{N}, and \code{rep}.
+column per indicator, \code{n_removed}, and \code{rep}.
 }
 \description{
 Runs \code{n_reps} independent replicates of a \emph{topological} null model: each

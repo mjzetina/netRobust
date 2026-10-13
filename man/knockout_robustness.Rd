@@ -42,7 +42,7 @@ at silently.}
 the \emph{intact} network (nothing removed) -- \code{group_id = 0}, \code{group = character(0)}, \code{n_removed = 0} -- so every group's indicator values sit
 in the same table as the baseline they're implicitly compared against,
 instead of requiring you to look that value up separately (e.g. via
-\code{robustness()}'s own \code{N = 1} row, or recomputing it by hand). Never
+\code{robustness()}'s own \code{n_removed = 0} row, or recomputing it by hand). Never
 picked up by patterns like \code{res[which.min(res$giant_component_size), ]} -- the intact network's indicator values are never the most
 damaging outcome. Set \code{FALSE} to get the previous behaviour (one row
 per group, nothing else) -- e.g. \code{\link[=knockout_robustness_null_removal]{knockout_robustness_null_removal()}}

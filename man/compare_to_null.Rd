@@ -18,7 +18,7 @@ doesn't, this errors rather than silently comparing only the columns
 that happen to match.}
 }
 \value{
-A \code{data.frame} with columns \code{N}, \code{Index}, \code{observed}, \code{p_value},
+A \code{data.frame} with columns \code{n_removed}, \code{Index}, \code{observed}, \code{p_value},
 one row per indicator per removal step.
 }
 \description{

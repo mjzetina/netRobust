@@ -34,9 +34,10 @@
 #'   overrode one of them). `"error"` stops instead. See
 #'   `.prepare_edge_graph()`.
 #'
-#' @return A `data.frame`, one row per removal step (`N` = 1 .. `ecount(g)`
-#'   after any parallel-edge collapse), with one column per indicator plus
-#'   `connectivity` (normalised to the intact graph) -- same shape as
+#' @return A `data.frame` with one row per network state, from the intact
+#'   network (`n_removed = 0`) to the one with every edge removed
+#'   (`n_removed = ecount(g)` after any parallel-edge collapse), and one
+#'   column per indicator -- same shape as
 #'   [robustness()]'s output, so every downstream function that consumes it
 #'   ([compare_to_null()], [robustness_index()],
 #'   [compare_robustness_index_to_null()], [plot_robustness()],

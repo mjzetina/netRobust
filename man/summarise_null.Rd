@@ -9,7 +9,7 @@ summarise_null(null_df, probs = c(lower = 0.025, median = 0.5, upper = 0.975))
 \arguments{
 \item{null_df}{Output of \code{\link[=robustness_null_removal]{robustness_null_removal()}} or
 \code{\link[=robustness_null_structural]{robustness_null_structural()}} (wide format, one column per indicator
-plus \code{N} and \code{rep}).}
+plus \code{n_removed} and \code{rep}).}
 
 \item{probs}{Named numeric vector of three quantile \emph{levels} (each in
 \verb{[0, 1]}) to compute -- default \code{c(lower = 0.025, median = 0.5, upper = 0.975)}, the 2.5th/50th/97.5th percentiles across replicates (a 95\%
@@ -23,7 +23,7 @@ actually used are attached to the return value as \code{attr(result, "probs")}, 
 true coverage instead of assuming 95\%.}
 }
 \value{
-A \code{data.frame} with columns \code{Index}, \code{N}, \code{mean}, \code{lower},
+A \code{data.frame} with columns \code{Index}, \code{n_removed}, \code{mean}, \code{lower},
 \code{median}, \code{upper} -- long format, one row per indicator per removal
 step. \code{lower}/\code{median}/\code{upper} are the quantiles named by \verb{probs=}
 (2.5\%/50\%/97.5\% by default) -- see \verb{probs=} above for what those

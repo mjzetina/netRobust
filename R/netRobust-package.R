@@ -16,4 +16,4 @@
 # Column names referenced unquoted inside dplyr/ggplot2 calls (tidy
 # evaluation in summarise_null() and plot_robustness()) -- not real global
 # variables, just how NSE column references read to a static check.
-globalVariables(c("Index", "N", "Scenario", "Value", "lower", "upper"))
+globalVariables(c("Index", "Scenario", "Value", "lower", "n_removed", "upper"))

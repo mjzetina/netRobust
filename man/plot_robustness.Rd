@@ -34,7 +34,7 @@ true coverage (\code{attr(null_envelope, "probs")}, as set by
 \code{\link[=summarise_null]{summarise_null()}}'s \verb{probs=}) -- 95\% unless you customised \verb{probs=}
 when building it. When \code{failure}
 is \emph{not} also supplied, it's derived from this null distribution's
-\verb{summary=} column instead (\code{tidyr::pivot_wider(null_envelope, id_cols = N, names_from = Index, values_from = summary)}), and labelled
+\verb{summary=} column instead (\code{tidyr::pivot_wider(null_envelope, id_cols = n_removed, names_from = Index, values_from = summary)}), and labelled
 \code{"Failures (<summary>)"} -- guaranteed to match what's actually plotted,
 since this function performed the derivation itself, rather than
 trusting a \verb{failure=} you pivoted by hand to actually be that statistic.}

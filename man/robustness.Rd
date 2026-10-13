@@ -93,9 +93,12 @@ invert (\code{1/weight}) so stronger ties count as closer -- same
 convention as \code{\link[=attack_by_betweenness]{attack_by_betweenness()}}/\code{\link[=attack_by_closeness]{attack_by_closeness()}}.}
 }
 \value{
-A \code{data.frame}, one row per removal step (\code{N} = 1 ..
-\code{vcount(g)}), with one column per indicator plus \code{connectivity}
-(normalised to the intact graph).
+A \code{data.frame} with one row per network state, from the intact
+network to the empty one: \code{n_removed} (number of vertices removed so
+far, \code{0} = intact network, \code{vcount(g)} = every vertex removed) and one
+column per indicator. Indicators that are undefined on the remaining
+network (e.g. \code{mean_distance} once no paths are left, or anything but
+the size indicators on the empty network) are \code{NaN}/\code{NA}.
 }
 \description{
 Removes vertices from \code{g} one at a time, in the order given by \code{ids}

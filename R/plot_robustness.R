@@ -27,7 +27,7 @@
 #'   when building it. When `failure`
 #'   is *not* also supplied, it's derived from this null distribution's
 #'   `summary=` column instead (`tidyr::pivot_wider(null_envelope, id_cols =
-#'   N, names_from = Index, values_from = summary)`), and labelled
+#'   n_removed, names_from = Index, values_from = summary)`), and labelled
 #'   `"Failures (<summary>)"` -- guaranteed to match what's actually plotted,
 #'   since this function performed the derivation itself, rather than
 #'   trusting a `failure=` you pivoted by hand to actually be that statistic.
@@ -75,7 +75,7 @@ plot_robustness <- function(attack, failure = NULL, null_envelope = NULL,
            "failure will be derived from it automatically (see summary=).",
            call. = FALSE)
     }
-    failure <- tidyr::pivot_wider(null_envelope, id_cols = "N",
+    failure <- tidyr::pivot_wider(null_envelope, id_cols = "n_removed",
                                    names_from = "Index", values_from = dplyr::all_of(summary))
     auto_label <- paste0("Failures (", summary, ")")
   } else {
@@ -83,8 +83,8 @@ plot_robustness <- function(attack, failure = NULL, null_envelope = NULL,
   }
   failure_label <- if (!is.null(failure_label)) failure_label else auto_label
 
-  failure_lon <- tidyr::pivot_longer(failure, -N, names_to = "Index", values_to = "Value")
-  attack_lon  <- tidyr::pivot_longer(attack,  -N, names_to = "Index", values_to = "Value")
+  failure_lon <- tidyr::pivot_longer(failure, -n_removed, names_to = "Index", values_to = "Value")
+  attack_lon  <- tidyr::pivot_longer(attack,  -n_removed, names_to = "Index", values_to = "Value")
 
   failure_lon$Scenario <- failure_label
   attack_lon$Scenario  <- "Attack"
@@ -99,10 +99,10 @@ plot_robustness <- function(attack, failure = NULL, null_envelope = NULL,
   # the network fragments enough during removal -- e.g. a single isolated
   # node has no diameter -- so those specific points simply have nothing
   # to draw.
-  na_curve <- scenarios[is.na(scenarios$Value), c("Scenario", "Index", "N")]
+  na_curve <- scenarios[is.na(scenarios$Value), c("Scenario", "Index", "n_removed")]
   if (nrow(na_curve) > 0) {
-    by_group <- stats::aggregate(N ~ Scenario + Index, na_curve, length)
-    detail <- paste0(by_group$Scenario, "/", by_group$Index, " (", by_group$N, " step(s))",
+    by_group <- stats::aggregate(n_removed ~ Scenario + Index, na_curve, length)
+    detail <- paste0(by_group$Scenario, "/", by_group$Index, " (", by_group$n_removed, " step(s))",
                       collapse = ", ")
     warning(nrow(na_curve), " point(s) are NA and won't be drawn: ", detail,
             ". This is expected once the network fragments enough during removal ",
@@ -117,12 +117,12 @@ plot_robustness <- function(attack, failure = NULL, null_envelope = NULL,
     }
   }
 
-  p <- ggplot2::ggplot(scenarios, ggplot2::aes(x = N, y = Value, colour = Scenario, group = Scenario))
+  p <- ggplot2::ggplot(scenarios, ggplot2::aes(x = n_removed, y = Value, colour = Scenario, group = Scenario))
 
   if (!is.null(null_envelope)) {
     p <- p + ggplot2::geom_ribbon(
       data = null_envelope,
-      ggplot2::aes(x = N, ymin = lower, ymax = upper),
+      ggplot2::aes(x = n_removed, ymin = lower, ymax = upper),
       inherit.aes = FALSE, alpha = 0.15, fill = null_color
     )
     # summarise_null() attaches the quantile levels it actually used as a

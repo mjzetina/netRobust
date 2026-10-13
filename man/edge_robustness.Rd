@@ -40,9 +40,10 @@ overrode one of them). \code{"error"} stops instead. See
 \code{.prepare_edge_graph()}.}
 }
 \value{
-A \code{data.frame}, one row per removal step (\code{N} = 1 .. \code{ecount(g)}
-after any parallel-edge collapse), with one column per indicator plus
-\code{connectivity} (normalised to the intact graph) -- same shape as
+A \code{data.frame} with one row per network state, from the intact
+network (\code{n_removed = 0}) to the one with every edge removed
+(\code{n_removed = ecount(g)} after any parallel-edge collapse), and one
+column per indicator -- same shape as
 \code{\link[=robustness]{robustness()}}'s output, so every downstream function that consumes it
 (\code{\link[=compare_to_null]{compare_to_null()}}, \code{\link[=robustness_index]{robustness_index()}},
 \code{\link[=compare_robustness_index_to_null]{compare_robustness_index_to_null()}}, \code{\link[=plot_robustness]{plot_robustness()}},

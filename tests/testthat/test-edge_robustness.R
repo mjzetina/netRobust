@@ -15,7 +15,8 @@ test_that("edge_robustness() removes edges only -- starts at the intact giant_co
   set.seed(1)
   ord <- random_edge_failures(g)
   res <- edge_robustness(g, ids = ord, keep = c("giant_component_size", "edge_density"))
-  expect_equal(nrow(res), ecount(g))
+  expect_equal(nrow(res), ecount(g) + 1)  # intact network plus one row per removed edge
+  expect_equal(res$n_removed, 0:ecount(g))
   expect_equal(res$giant_component_size[1], vcount(g))  # no edges removed yet: still one giant component
   expect_true(all(diff(res$edge_density) <= 1e-9))  # non-increasing as edges are removed
 })
@@ -88,15 +89,16 @@ test_that("robustness() is unaffected by the shared-loop refactor (regression ch
   set.seed(1)
   d <- attack_by_degree(g)
   res <- robustness(g, ids = d, keep = c("giant_component_size"))
-  expect_equal(nrow(res), vcount(g))
+  expect_equal(nrow(res), vcount(g) + 1)
+  expect_equal(res$giant_component_size[nrow(res)], 0)  # empty network
   expect_equal(res$giant_component_size[1], vcount(g))
   expect_true(all(diff(res$giant_component_size) <= 0))  # giant_component_size is non-increasing under node removal
 })
 
 test_that("edge_robustness_null_removal() builds a valid null distribution", {
   null_dist <- edge_robustness_null_removal(g, n_reps = 5, seed = 1, keep = c("giant_component_size"))
-  expect_equal(nrow(null_dist), 5 * ecount(g))
-  expect_true(all(c("N", "giant_component_size", "rep") %in% names(null_dist)))
+  expect_equal(nrow(null_dist), 5 * (ecount(g) + 1))
+  expect_true(all(c("n_removed", "giant_component_size", "rep") %in% names(null_dist)))
   expect_equal(length(unique(null_dist$rep)), 5)
 })
 
@@ -106,7 +108,7 @@ test_that("edge_robustness_null_removal() output plugs into compare_to_null()/ro
   null_dist <- edge_robustness_null_removal(g, n_reps = 5, seed = 1, keep = c("giant_component_size"))
 
   sig <- compare_to_null(eattack, null_dist)
-  expect_true(all(c("N", "Index", "observed", "p_value") %in% names(sig)))
+  expect_true(all(c("n_removed", "Index", "observed", "p_value") %in% names(sig)))
 
   cmp <- compare_robustness_index_to_null(eattack, null_dist, index = "giant_component_size")
   expect_true(all(c("observed", "null_mean", "null_median", "p_value") %in% names(cmp)))
@@ -119,5 +121,5 @@ test_that("edge_robustness_null_removal() applies on_parallel consistently to bo
     null_dist <- edge_robustness_null_removal(gp, n_reps = 2, seed = 1),
     "redundant edge"
   )
-  expect_equal(nrow(null_dist), 2 * 2)  # 3 raw edges collapse to 2, times 2 replicates
+  expect_equal(nrow(null_dist), 2 * 3)  # 3 raw edges collapse to 2 (+ intact row), times 2 replicates
 })
