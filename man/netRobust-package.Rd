@@ -23,11 +23,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Manuel J. Zetina-Rejón \email{mjzetina@gmail.com} (\href{https://orcid.org/0000-0002-7181-9828}{ORCID})
+\strong{Maintainer}: Manuel J. Zetina-Rejón \email{mzetina@ipn.mx} (\href{https://orcid.org/0000-0002-7181-9828}{ORCID})
 
 Authors:
 \itemize{
-  \item Manuel J. Zetina-Rejón \email{mjzetina@gmail.com} (\href{https://orcid.org/0000-0002-7181-9828}{ORCID})
+  \item Manuel J. Zetina-Rejón \email{mzetina@ipn.mx} (\href{https://orcid.org/0000-0002-7181-9828}{ORCID})
 }
 
 }

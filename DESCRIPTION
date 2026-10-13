@@ -2,7 +2,7 @@ Package: netRobust
 Title: Network Robustness Under Random Failures and Targeted Attacks
 Version: 0.1.0.9000
 Authors@R:
-    person("Manuel J.", "Zetina-Rejón", , "mjzetina@gmail.com", role = c("aut", "cre"),
+    person("Manuel J.", "Zetina-Rejón", , "mzetina@ipn.mx", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7181-9828"))
 Description: Simulates and compares network robustness to random node
     failures and targeted attacks (by degree, betweenness, closeness,
