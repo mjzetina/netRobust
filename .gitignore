@@ -9,6 +9,9 @@
 *.Rout
 Rplots.pdf
 
+# Vignette renders from knitting in RStudio (R CMD build makes its own)
+vignettes/*.html
+
 # OS-specific junk
 .DS_Store
 Thumbs.db
