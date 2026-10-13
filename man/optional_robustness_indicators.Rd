@@ -4,7 +4,7 @@
 \alias{optional_robustness_indicators}
 \title{Optional robustness indicators with built-in applicability guards}
 \usage{
-optional_robustness_indicators(g = NULL, names = NULL)
+optional_robustness_indicators(g = NULL, names = NULL, weight_attr = NA)
 }
 \arguments{
 \item{g}{Optional \code{igraph} object. If supplied, applicability is checked
@@ -33,6 +33,18 @@ directed graph won't emit \code{mean_topological_diversity}'s "will
 collapse" warning, since that indicator was never requested in the
 first place. An unrecognised name errors. \code{NULL} (default) builds all
 of them.}
+
+\item{weight_attr}{Name of an edge attribute to use as weights for
+\code{radius}, or \code{NA} (default) for unweighted hop counts -- the same
+convention as in \code{\link[=default_robustness_indicators]{default_robustness_indicators()}}, so \code{radius} follows
+the same weighting decision as \code{diameter}/\code{mean_distance}.
+\code{\link[=robustness]{robustness()}} and \code{\link[=edge_robustness]{edge_robustness()}} set this from \code{weights}/
+\code{weights_as} (including the \code{"strength"} inversion). Without it, \code{radius}
+is always topological, even on a weighted graph: \code{igraph::radius()} would
+otherwise silently pick up a \code{weight} edge attribute. Other optional
+indicators are unaffected: \code{reciprocity} ignores weights, and
+\code{mean_topological_diversity} deliberately reads the \code{weight} attribute
+itself (it is an entropy of edge weights, Eagle et al. 2010).}
 }
 \value{
 A named list of \verb{function(graph) -> scalar}, matching the format

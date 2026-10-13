@@ -121,19 +121,21 @@ John A (the club president, degree 17) and Mr Hi (the instructor, degree
 16) are removed first -- unsurprising, since the whole club revolved
 around these two long before it split around them. Both return the same
 shape: a named integer vector, first element = first vertex removed.
-Four more targeted-attack criteria exist -- `attack_by_betweenness()`,
-`attack_by_closeness()`, `attack_by_eigenvector()`, and
-`attack_by_pagerank()` -- with the same `function(g) -> removal order`
-contract.
+Five more targeted-attack criteria exist -- `attack_by_betweenness()`,
+`attack_by_closeness()`, `attack_by_eigenvector()`, `attack_by_pagerank()`,
+and `attack_by_hits()` (Kleinberg's hub or authority scores, for directed
+networks) -- with the same `function(g) -> removal order` contract.
 
 ## A note on direction and weights
 
 On a directed graph, "degree" is ambiguous: a vertex can have many
-incoming connections and few outgoing ones, or vice versa. Every
-`attack_by_*()` function exposes `mode = c("all", "out", "in")` (ignored
-on undirected graphs, like the Karate Club above) to control which one
-drives the attack. To see why this matters, take a tiny directed toy
-graph with one "out-hub" and one "in-hub":
+incoming connections and few outgoing ones, or vice versa.
+`attack_by_degree()` and `attack_by_closeness()` expose
+`mode = c("all", "out", "in")` (ignored on undirected graphs, like the
+Karate Club above) to control which one drives the attack; the other
+attacks follow edge direction as their own measure defines it (e.g.
+hub vs. authority in `attack_by_hits()`). To see why this matters, take
+a tiny directed toy graph with one "out-hub" and one "in-hub":
 
 ```{r}
 toy <- graph_from_literal(A -+ B, A -+ C, A -+ D, B -+ D, C -+ D, E -+ D)
@@ -155,13 +157,18 @@ the `attack_by_*()` functions default to `directed = NULL`, which
 auto-detects from `is_directed(g)`; pass `directed =` explicitly only to
 override that.
 
-The betweenness/closeness/eigenvector/PageRank attacks take a parallel
+The betweenness/closeness/eigenvector/PageRank/HITS attacks take a parallel
 `weights_as = c("distance", "strength")` argument for *weighted*
 networks, telling netRobust how to interpret an edge weight: as a
-**distance** (bigger weight = farther apart, used as-is) or as a
-**strength** (bigger weight = closer/stronger tie, inverted before
-being used as a distance). The Karate Club's weights are interaction
-strengths, so this actually matters here:
+**distance** (bigger weight = farther apart) or as a **strength**
+(bigger weight = closer/stronger tie). Each measure has a native
+reading and inverts the weights (`1 / weight`) only when asked for the
+other one: shortest-path measures (betweenness, closeness) read weights
+as distances, so `"strength"` inverts them; influence measures
+(eigenvector, PageRank, HITS) read weights as strengths, so
+`"distance"` inverts them. With `weights_as = NULL` (the default) each
+measure uses its native reading. The Karate Club's weights are
+interaction strengths, so this actually matters here:
 
 ```{r}
 b_strength <- attack_by_betweenness(g, weights_as = "strength")

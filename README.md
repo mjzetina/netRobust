@@ -2,7 +2,8 @@
 
 Simulate and compare network robustness to random node failures and
 targeted attacks (by degree, betweenness, closeness, eigenvector
-centrality, and PageRank), extending the approach of Albert, Jeong &
+centrality, PageRank, and Kleinberg's HITS hub/authority scores),
+extending the approach of Albert, Jeong &
 Barabási (2000). Includes a Monte Carlo framework for testing whether an
 attack scenario is statistically more damaging than random failure, and
 utilities for plotting robustness curves with a null-model reference
@@ -57,7 +58,12 @@ comparisons (pointwise and whole-curve). Every function also has its own
 
 ## Citation
 
-This package generalises two published methods:
+If you use netRobust, please cite the software itself. Citation metadata
+is in [`CITATION.cff`](CITATION.cff) (GitHub's "Cite this repository"
+button shows it in APA and BibTeX); each release is archived on Zenodo
+with its own DOI -- cite the DOI of the version you used.
+
+netRobust generalises two published methods:
 
 - Albert, R., Jeong, H., & Barabási, A.-L. (2000). Error and attack
   tolerance of complex networks. *Nature*, 406, 378-382.

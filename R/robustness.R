@@ -164,6 +164,17 @@ default_robustness_indicators <- function(directed = FALSE, component_mode = "we
 #'   collapse" warning, since that indicator was never requested in the
 #'   first place. An unrecognised name errors. `NULL` (default) builds all
 #'   of them.
+#' @param weight_attr Name of an edge attribute to use as weights for
+#'   `radius`, or `NA` (default) for unweighted hop counts -- the same
+#'   convention as in [default_robustness_indicators()], so `radius` follows
+#'   the same weighting decision as `diameter`/`mean_distance`.
+#'   [robustness()] and [edge_robustness()] set this from `weights`/
+#'   `weights_as` (including the `"strength"` inversion). Without it, `radius`
+#'   is always topological, even on a weighted graph: `igraph::radius()` would
+#'   otherwise silently pick up a `weight` edge attribute. Other optional
+#'   indicators are unaffected: `reciprocity` ignores weights, and
+#'   `mean_topological_diversity` deliberately reads the `weight` attribute
+#'   itself (it is an entropy of edge weights, Eagle et al. 2010).
 #'
 #' @return A named list of `function(graph) -> scalar`, matching the format
 #'   expected by [robustness()]'s `indicators=`/`custom=` arguments.
@@ -182,7 +193,9 @@ default_robustness_indicators <- function(directed = FALSE, component_mode = "we
 #' }
 #' @seealso [robustness()], [default_robustness_indicators()]
 #' @export
-optional_robustness_indicators <- function(g = NULL, names = NULL) {
+optional_robustness_indicators <- function(g = NULL, names = NULL, weight_attr = NA) {
+  get_w <- function(gi) if (identical(weight_attr, NA)) NA else igraph::edge_attr(gi, weight_attr)
+
   # Builds the mean_topological_diversity function. warn_collapse controls
   # whether it warns about collapsing a directed graph on every single call
   # (TRUE -- the only option when g isn't supplied below, since directedness
@@ -221,7 +234,11 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
   }
 
   full <- list(
-    radius = function(g) radius(g, mode = "all"),
+    # weights = get_w(g), never left NULL: igraph::radius() with weights = NULL
+    # silently uses a `weight` edge attribute when present, which would make
+    # radius weighted on weighted graphs while diameter/mean_distance stay
+    # topological unless weights/weights_as is requested.
+    radius = function(g) radius(g, mode = "all", weights = get_w(g)),
 
     reciprocity = function(g) {
       if (!is_directed(g)) {
@@ -385,7 +402,8 @@ optional_robustness_indicators <- function(g = NULL, names = NULL) {
       # mean_topological_diversity's "will collapse" warning just because
       # it happened to be inapplicable -- it was never requested.
       req_names <- if (isTRUE(optional)) NULL else optional
-      indicators <- c(indicators, optional_robustness_indicators(g, names = req_names))
+      indicators <- c(indicators, optional_robustness_indicators(g, names = req_names,
+                                                                   weight_attr = weight_attr))
     }
     if (!is.null(custom))  indicators <- c(indicators, custom)
   } else if (!is.list(indicators) || is.null(names(indicators)) ||
@@ -483,7 +501,7 @@ list_indicators <- function() {
       "Global transitivity: proportion of connected triples that form triangles.",
       "Degree assortativity: do high-degree vertices preferentially connect to other high-degree vertices?",
       "Giant component size, normalised to the intact network's reachable pairs (0-100%).",
-      "Minimum eccentricity: shortest path length from the most central vertex to its farthest vertex.",
+      "Minimum eccentricity: shortest path length from the most central vertex to its farthest vertex (hop count, or weighted distance via weights_as=).",
       "Proportion of edges that are reciprocated (mutual).",
       "Mean normalised Shannon entropy of each vertex's incident edge weights (Eagle et al. 2010)."
     ),

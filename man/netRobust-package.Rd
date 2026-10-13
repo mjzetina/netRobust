@@ -8,18 +8,26 @@
 \description{
 Simulates and compares network robustness to random node failures and
 targeted attacks (by degree, betweenness, closeness, eigenvector
-centrality, and PageRank), extending the approach of Albert, Jeong &
-Barabasi (2000). Includes a Monte Carlo framework for testing whether an
-attack scenario is statistically more damaging than random failure, and
-utilities for plotting robustness curves with a null-model reference
-envelope.
+centrality, PageRank, and Kleinberg's HITS hub/authority scores),
+extending the approach of Albert, Jeong & Barabasi (2000). Includes a
+Monte Carlo framework for testing whether an attack scenario is
+statistically more damaging than random failure, and utilities for
+plotting robustness curves with a null-model reference envelope.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/mjzetina/netRobust}
+  \item Report bugs at \url{https://github.com/mjzetina/netRobust/issues}
+}
+
 }
 \author{
-\strong{Maintainer}: Manuel J. Zetina-Rejon \email{mjzetina@gmail.com}
+\strong{Maintainer}: Manuel J. Zetina-Rejón \email{mzetina@ipn.mx} (\href{https://orcid.org/0000-0002-7181-9828}{ORCID})
 
 Authors:
 \itemize{
-  \item Manuel J. Zetina-Rejon \email{mjzetina@gmail.com}
+  \item Manuel J. Zetina-Rejón \email{mzetina@ipn.mx} (\href{https://orcid.org/0000-0002-7181-9828}{ORCID})
 }
 
 }
